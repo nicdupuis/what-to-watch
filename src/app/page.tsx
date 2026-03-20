@@ -25,6 +25,7 @@ import {
   Share2,
   Clapperboard,
   User,
+  Users,
 } from "lucide-react";
 
 interface Recommendation {
@@ -225,7 +226,7 @@ export default function HomePage() {
       )}
 
       {/* Your Taste Profile */}
-      <TasteProfile movies={watchedListMovies} isLoading={isLoading} />
+      <TasteProfile movies={watchedMovies} isLoading={isLoading} />
 
       {/* Recommended For You */}
       <RecommendedForYou username={settings.letterboxdUsername} />
@@ -388,16 +389,28 @@ function TasteProfile({
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3);
 
+  // Count actors
+  const actorCounts = new Map<string, number>();
+  for (const movie of movies) {
+    for (const actor of movie.topCast) {
+      actorCounts.set(actor, (actorCounts.get(actor) ?? 0) + 1);
+    }
+  }
+  const topActors = [...actorCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
   return (
     <section>
       <h2 className="mb-4 text-lg font-semibold flex items-center gap-2">
         <Clapperboard className="h-5 w-5" />
         Your Taste Profile
       </h2>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+              <Film className="h-3.5 w-3.5" />
               Top Genres
             </CardTitle>
           </CardHeader>
@@ -432,7 +445,8 @@ function TasteProfile({
         {topDirectors.length > 0 && (
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5" />
                 Favorite Directors
               </CardTitle>
             </CardHeader>
@@ -444,6 +458,35 @@ function TasteProfile({
                 >
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
                     <User className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {count} {count === 1 ? "film" : "films"} watched
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {topActors.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                <Users className="h-3.5 w-3.5" />
+                Top Actors
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {topActors.map(([name, count]) => (
+                <div
+                  key={name}
+                  className="flex items-center gap-3 rounded-lg border p-3"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                    <Users className="h-4 w-4 text-primary" />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-medium">{name}</p>

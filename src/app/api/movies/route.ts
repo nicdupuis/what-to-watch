@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { discoverAllMovies, getMovieBasic, getMovieCredits } from "@/lib/tmdb";
+import { discoverAllMovies, getMovieBasic, getMovieCredits, getWatchProviders } from "@/lib/tmdb";
 import { parseRSS, scrapeList, scrapeTaggedFilms } from "@/lib/letterboxd";
 import { MovieSummary, TMDBMovie } from "@/types/movie";
 import { LetterboxdEntry, LetterboxdListEntry } from "@/types/letterboxd";
@@ -182,6 +182,8 @@ export async function GET(request: NextRequest) {
         anticipated: anticipatedSlugs.has(normalizedTitle),
         directors: [],
         topCast: [],
+        streamingProviders: [],
+        isReleased: false,
       });
 
       if (tmdb) seenTmdbIds.add(tmdb.id);
@@ -223,6 +225,8 @@ export async function GET(request: NextRequest) {
         anticipated: true,
         directors: [],
         topCast: [],
+        streamingProviders: [],
+        isReleased: false,
       });
 
       if (tmdb) seenTmdbIds.add(tmdb.id);
@@ -269,6 +273,8 @@ export async function GET(request: NextRequest) {
         anticipated: false,
         directors: [],
         topCast: [],
+        streamingProviders: [],
+        isReleased: false,
       });
     }
 
@@ -284,6 +290,22 @@ export async function GET(request: NextRequest) {
         batch[j].directors = creditResults[j].directors;
         batch[j].topCast = creditResults[j].topCast;
       }
+    }
+
+    // 9. Batch-fetch watch providers for all movies with a valid tmdbId
+    for (let i = 0; i < moviesToFetch.length; i += BATCH_SIZE) {
+      const batch = moviesToFetch.slice(i, i + BATCH_SIZE);
+      const providerResults = await Promise.all(
+        batch.map((m) => getWatchProviders(m.tmdbId))
+      );
+      for (let j = 0; j < batch.length; j++) {
+        batch[j].streamingProviders = providerResults[j];
+      }
+    }
+
+    // 10. Set isReleased based on releaseDate <= today
+    for (const movie of results) {
+      movie.isReleased = !!(movie.releaseDate && movie.releaseDate <= today);
     }
 
     return NextResponse.json(results);

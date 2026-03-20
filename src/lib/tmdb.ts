@@ -96,6 +96,37 @@ export async function getMovieCredits(
   return { directors, topCast };
 }
 
+export async function getWatchProviders(
+  id: number
+): Promise<{ name: string; logoPath: string }[]> {
+  try {
+    const res = await tmdbFetch(`/movie/${id}/watch/providers`, 86400);
+    if (!res.ok) return [];
+    const data = await res.json();
+    const ca = data.results?.CA;
+    if (!ca) return [];
+    // Combine flatrate + ads + free, deduplicate by name
+    const all = [
+      ...(ca.flatrate ?? []),
+      ...(ca.ads ?? []),
+      ...(ca.free ?? []),
+    ];
+    const seen = new Set<string>();
+    return all
+      .filter((p: { provider_name: string }) => {
+        if (seen.has(p.provider_name)) return false;
+        seen.add(p.provider_name);
+        return true;
+      })
+      .map((p: { provider_name: string; logo_path: string }) => ({
+        name: p.provider_name,
+        logoPath: p.logo_path,
+      }));
+  } catch {
+    return [];
+  }
+}
+
 export async function getUpcoming(): Promise<TMDBDiscoverResponse> {
   const res = await tmdbFetch(`/movie/upcoming?region=CA`, 3600);
   if (!res.ok) throw new Error(`TMDB upcoming failed: ${res.status}`);

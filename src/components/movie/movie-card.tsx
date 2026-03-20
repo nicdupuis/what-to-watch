@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { ExternalLink, Clapperboard, Users } from "lucide-react";
+import { ExternalLink, Clapperboard, Users, Calendar, Tv } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { cn, tmdbImageUrl } from "@/lib/utils";
 import { formatDate } from "@/lib/utils";
 import type { MovieSummary } from "@/types/movie";
 import { GENRE_MAP } from "@/types/movie";
@@ -128,6 +129,42 @@ function MovieCard({ movie }: MovieCardProps) {
                 {movie.overview}
               </p>
             )}
+
+            {/* Streaming Availability */}
+            <div className="mt-2">
+              {movie.isReleased && movie.streamingProviders.length > 0 ? (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <Tv className="h-3 w-3 shrink-0 text-muted-foreground" />
+                  <span className="text-[10px] text-muted-foreground">Available on:</span>
+                  {movie.streamingProviders.map((provider) => (
+                    <div
+                      key={provider.name}
+                      className="flex items-center gap-1"
+                      title={provider.name}
+                    >
+                      <Image
+                        src={tmdbImageUrl(provider.logoPath, "w92")}
+                        alt={provider.name}
+                        width={20}
+                        height={20}
+                        className="rounded-sm"
+                      />
+                      <span className="text-[10px] text-foreground">{provider.name}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : movie.isReleased ? (
+                <div className="flex items-center gap-1.5">
+                  <Tv className="h-3 w-3 shrink-0 text-muted-foreground" />
+                  <span className="text-[10px] text-muted-foreground">In theaters / available digitally</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="h-3 w-3 shrink-0 text-muted-foreground" />
+                  <span className="text-[10px] text-muted-foreground">Not yet released</span>
+                </div>
+              )}
+            </div>
 
             {/* Rating & Links */}
             <div className="mt-3 flex items-center gap-2 border-t pt-2">

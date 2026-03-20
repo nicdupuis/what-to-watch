@@ -19,6 +19,8 @@ export interface MovieSummary {
   anticipated: boolean; // on the user's anticipated list
   directors: string[];
   topCast: string[]; // up to 3 main actors
+  streamingProviders: { name: string; logoPath: string }[]; // flatrate streaming in Canada
+  isReleased: boolean; // releaseDate <= today
 }
 
 export interface MovieDetail extends MovieSummary {
