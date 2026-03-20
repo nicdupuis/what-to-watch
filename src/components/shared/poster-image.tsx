@@ -32,15 +32,15 @@ function PosterImage({
   // No poster but we have a backdrop — use it as fallback
   if (!posterPath && backdropPath) {
     return (
-      <div className={cn("relative overflow-hidden", className)} style={{ width, height }}>
+      <div className={cn("relative overflow-hidden", className)}>
         <Image
           src={tmdbImageUrl(backdropPath, "w780")}
           alt={alt}
           fill
-          className="rounded-md object-cover object-center"
+          className="object-cover object-center"
         />
         {/* Unofficial image indicator */}
-        <div className="group/tip absolute top-1.5 right-1.5">
+        <div className="group/tip absolute top-1.5 right-1.5 z-10">
           <AlertCircle className="h-4 w-4 text-amber-400 drop-shadow" />
           <div className="absolute right-0 top-6 hidden whitespace-nowrap rounded bg-popover px-2 py-1 text-[10px] text-popover-foreground shadow-md group-hover/tip:block">
             Not an official poster
@@ -50,18 +50,17 @@ function PosterImage({
     );
   }
 
-  // No image at all
+  // No image at all — centered placeholder
   if (!posterPath) {
     return (
       <div
         className={cn(
-          "flex flex-col items-center justify-center gap-2 rounded-md bg-muted",
+          "flex flex-col items-center justify-center gap-2 bg-muted",
           className,
         )}
-        style={{ width, height }}
       >
-        <Film className="h-8 w-8 text-muted-foreground" />
-        <span className="px-3 text-center text-xs font-medium text-muted-foreground leading-tight">
+        <Film className="h-10 w-10 text-muted-foreground/50" />
+        <span className="max-w-[80%] text-center text-xs font-medium text-muted-foreground leading-tight">
           {alt}
         </span>
       </div>
@@ -74,7 +73,7 @@ function PosterImage({
       alt={alt}
       width={width}
       height={height}
-      className={cn("rounded-md object-cover", className)}
+      className={cn("object-cover", className)}
     />
   );
 }
