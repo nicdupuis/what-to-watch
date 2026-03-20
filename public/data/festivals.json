@@ -1,0 +1,92 @@
+[
+  {
+    "id": "sundance-2026",
+    "name": "Sundance Film Festival",
+    "location": "Park City, Utah, USA",
+    "startDate": "2026-01-22",
+    "endDate": "2026-02-01",
+    "url": "https://www.sundance.org/festivals/sundance-film-festival",
+    "color": "#E23636",
+    "notableFilms": []
+  },
+  {
+    "id": "berlin-2026",
+    "name": "Berlin International Film Festival",
+    "location": "Berlin, Germany",
+    "startDate": "2026-02-12",
+    "endDate": "2026-02-22",
+    "url": "https://www.berlinale.de",
+    "color": "#C41230",
+    "notableFilms": []
+  },
+  {
+    "id": "sxsw-2026",
+    "name": "SXSW Film Festival",
+    "location": "Austin, Texas, USA",
+    "startDate": "2026-03-13",
+    "endDate": "2026-03-22",
+    "url": "https://www.sxsw.com",
+    "color": "#F26522",
+    "notableFilms": []
+  },
+  {
+    "id": "cannes-2026",
+    "name": "Cannes Film Festival",
+    "location": "Cannes, France",
+    "startDate": "2026-05-13",
+    "endDate": "2026-05-24",
+    "url": "https://www.festival-cannes.com",
+    "color": "#E4B04A",
+    "notableFilms": []
+  },
+  {
+    "id": "venice-2026",
+    "name": "Venice Film Festival",
+    "location": "Venice, Italy",
+    "startDate": "2026-08-26",
+    "endDate": "2026-09-05",
+    "url": "https://www.labiennale.org/en/cinema",
+    "color": "#1B3A5C",
+    "notableFilms": []
+  },
+  {
+    "id": "telluride-2026",
+    "name": "Telluride Film Festival",
+    "location": "Telluride, Colorado, USA",
+    "startDate": "2026-09-04",
+    "endDate": "2026-09-07",
+    "url": "https://www.telluridefilmfestival.org",
+    "color": "#8B4513",
+    "notableFilms": []
+  },
+  {
+    "id": "tiff-2026",
+    "name": "Toronto International Film Festival",
+    "location": "Toronto, Canada",
+    "startDate": "2026-09-10",
+    "endDate": "2026-09-20",
+    "url": "https://www.tiff.net",
+    "color": "#E31837",
+    "notableFilms": []
+  },
+  {
+    "id": "nyff-2026",
+    "name": "New York Film Festival",
+    "location": "New York City, USA",
+    "startDate": "2026-09-25",
+    "endDate": "2026-10-11",
+    "url": "https://www.filmlinc.org/nyff",
+    "color": "#1C1C1C",
+    "notableFilms": []
+  },
+  {
+    "id": "afi-2026",
+    "name": "AFI Fest",
+    "location": "Los Angeles, USA",
+    "startDate": "2026-10-22",
+    "endDate": "2026-10-26",
+    "url": "https://fest.afi.com",
+    "color": "#9B2335",
+    "notableFilms": []
+  }
+]
