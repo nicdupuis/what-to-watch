@@ -19,7 +19,7 @@ export async function discoverMovies(
   sortBy: string = "popularity.desc"
 ): Promise<TMDBDiscoverResponse> {
   const res = await tmdbFetch(
-    `/discover/movie?primary_release_year=${year}&region=CA&sort_by=${sortBy}&page=${page}&include_adult=false`,
+    `/discover/movie?primary_release_year=${year}&region=CA&sort_by=${sortBy}&page=${page}&include_adult=false&with_original_language=en`,
     3600
   );
   if (!res.ok) throw new Error(`TMDB discover failed: ${res.status}`);
