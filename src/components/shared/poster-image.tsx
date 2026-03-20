@@ -32,13 +32,12 @@ function PosterImage({
   // No poster but we have a backdrop — use it as fallback
   if (!posterPath && backdropPath) {
     return (
-      <div className={cn("relative", className)} style={{ width, height }}>
+      <div className={cn("relative overflow-hidden", className)} style={{ width, height }}>
         <Image
           src={tmdbImageUrl(backdropPath, "w780")}
           alt={alt}
-          width={width}
-          height={height}
-          className="h-full w-full rounded-md object-cover"
+          fill
+          className="rounded-md object-cover object-center"
         />
         {/* Unofficial image indicator */}
         <div className="group/tip absolute top-1.5 right-1.5">

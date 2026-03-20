@@ -58,7 +58,14 @@ function MovieCard({ movie }: MovieCardProps) {
             )}
           </div>
           <div className="p-3">
-            <h3 className="truncate text-sm font-semibold">{movie.title}</h3>
+            <div className="flex items-start justify-between gap-1">
+              <h3 className="truncate text-sm font-semibold">{movie.title}</h3>
+              {movie.voteAverage > 0 && movie.releaseDate && movie.releaseDate <= new Date().toISOString().split("T")[0] && (
+                <span className="shrink-0 rounded bg-amber-500/90 px-1 py-0.5 text-[10px] font-bold text-white leading-none">
+                  {movie.voteAverage.toFixed(1)}
+                </span>
+              )}
+            </div>
             {movie.directors.length > 0 && (
               <p className="mt-0.5 truncate text-xs text-muted-foreground">
                 {movie.directors.join(", ")}

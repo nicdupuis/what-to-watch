@@ -14,9 +14,43 @@ function normalize(title: string): string {
 
 const MIN_POPULARITY = 5;
 
+/**
+ * Picks the best TMDB match from search results.
+ * Prefers: exact year match > future release > most popular.
+ */
+function pickBestMatch(
+  results: TMDBMovie[],
+  targetYear: number
+): TMDBMovie | null {
+  if (results.length === 0) return null;
+  if (results.length === 1) return results[0];
+
+  // If we have a target year, prefer exact match
+  if (targetYear > 0) {
+    const yearMatch = results.find((m) => {
+      const y = m.release_date ? parseInt(m.release_date.substring(0, 4), 10) : 0;
+      return y === targetYear;
+    });
+    if (yearMatch) return yearMatch;
+  }
+
+  // Prefer recent/upcoming releases (2025+)
+  const recent = results.filter((m) => {
+    const y = m.release_date ? parseInt(m.release_date.substring(0, 4), 10) : 0;
+    return y >= 2025;
+  });
+  if (recent.length > 0) {
+    return recent.sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))[0];
+  }
+
+  // Fall back to most popular
+  return results.sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))[0];
+}
+
 async function enrichWithTMDB(
   entries: LetterboxdListEntry[],
-  tmdbByTitle: Map<string, TMDBMovie>
+  tmdbByTitle: Map<string, TMDBMovie>,
+  trackingYear: number
 ): Promise<{ entry: LetterboxdListEntry; tmdb: TMDBMovie | null }[]> {
   const results: { entry: LetterboxdListEntry; tmdb: TMDBMovie | null }[] = [];
   const searchPromises: Promise<void>[] = [];
@@ -28,13 +62,33 @@ async function enrichWithTMDB(
     if (!tmdb) {
       const idx = results.length - 1;
       searchPromises.push(
-        searchMovie(entry.title, entry.year || undefined)
-          .then((res) => {
-            if (res.results.length > 0) {
-              results[idx].tmdb = res.results[0];
+        (async () => {
+          try {
+            // If we have a year from Letterboxd, search with it
+            const year = entry.year || trackingYear;
+            const res = await searchMovie(entry.title, year);
+            let match = pickBestMatch(res.results, year);
+
+            // If no results with year, retry without year constraint
+            if (!match && entry.year) {
+              const fallback = await searchMovie(entry.title);
+              match = pickBestMatch(fallback.results, entry.year);
             }
-          })
-          .catch(() => {})
+
+            // If year was 0 and we searched with trackingYear but got nothing,
+            // try without any year
+            if (!match && !entry.year) {
+              const fallback = await searchMovie(entry.title);
+              match = pickBestMatch(fallback.results, trackingYear);
+            }
+
+            if (match) {
+              results[idx].tmdb = match;
+            }
+          } catch {
+            // Search failed, leave tmdb as null
+          }
+        })()
       );
     }
   }
@@ -139,7 +193,8 @@ export async function GET(request: NextRequest) {
     // Enrich watched list with TMDB
     const enrichedWatched = await enrichWithTMDB(
       [...allWatched.values()],
-      tmdbByTitle
+      tmdbByTitle,
+      year
     );
 
     for (const { entry, tmdb } of enrichedWatched) {
@@ -177,7 +232,8 @@ export async function GET(request: NextRequest) {
     );
     const enrichedAnticipated = await enrichWithTMDB(
       newAnticipated,
-      tmdbByTitle
+      tmdbByTitle,
+      year
     );
 
     for (const { entry, tmdb } of enrichedAnticipated) {
