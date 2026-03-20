@@ -225,8 +225,8 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Your Taste Profile */}
-      <TasteProfile movies={watchedMovies} isLoading={isLoading} />
+      {/* Your Taste Profile — based on ALL films watched in 2026 */}
+      {isConfigured && <TasteProfile username={settings.letterboxdUsername} />}
 
       {/* Recommended For You */}
       <RecommendedForYou username={settings.letterboxdUsername} />
@@ -357,14 +357,28 @@ const GENRE_COLORS = [
   "bg-violet-500",
 ];
 
-function TasteProfile({
-  movies,
-  isLoading,
-}: {
-  movies: import("@/types/movie").MovieSummary[];
-  isLoading: boolean;
-}) {
-  if (isLoading || movies.length === 0) return null;
+interface DiaryMovie {
+  title: string;
+  year: number;
+  watchedDate: string;
+  rating: number | null;
+  tmdbId: number;
+  directors: string[];
+  topCast: string[];
+  genreIds: number[];
+  posterPath: string | null;
+}
+
+function TasteProfile({ username }: { username: string }) {
+  const { data: diary, isLoading } = useSWR<DiaryMovie[]>(
+    username ? `/api/diary?username=${encodeURIComponent(username)}&watchedYear=2026` : null,
+    recFetcher,
+    { revalidateOnFocus: false, dedupingInterval: 300000 }
+  );
+
+  if (isLoading || !diary || diary.length === 0) return null;
+
+  const movies = diary;
 
   // Count genres
   const genreCounts = new Map<number, number>();
@@ -402,10 +416,13 @@ function TasteProfile({
 
   return (
     <section>
-      <h2 className="mb-4 text-lg font-semibold flex items-center gap-2">
+      <h2 className="mb-1 text-lg font-semibold flex items-center gap-2">
         <Clapperboard className="h-5 w-5" />
         Your Taste Profile
       </h2>
+      <p className="mb-4 text-xs text-muted-foreground">
+        Based on {movies.length} films watched in 2026
+      </p>
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
