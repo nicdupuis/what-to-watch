@@ -3,18 +3,32 @@
 import { useState, useMemo } from "react";
 import { useMovies } from "@/hooks/use-movies";
 import { MovieGrid } from "@/components/movie/movie-grid";
-import { MovieFiltersBar, type MovieFilters } from "@/components/movie/movie-filters";
+import {
+  MovieFiltersBar,
+  type MovieFilters,
+} from "@/components/movie/movie-filters";
 import type { MovieSummary } from "@/types/movie";
 
 const defaultFilters: MovieFilters = {
   month: "",
   genre: "",
   watchedFilter: "all",
-  sortBy: "popularity",
+  sortBy: "list_ranking",
+  sourceFilter: "all",
 };
 
-function filterMovies(movies: MovieSummary[], filters: MovieFilters): MovieSummary[] {
+function filterMovies(
+  movies: MovieSummary[],
+  filters: MovieFilters
+): MovieSummary[] {
   let result = [...movies];
+
+  // Filter by source
+  if (filters.sourceFilter === "list") {
+    result = result.filter((m) => m.source === "list");
+  } else if (filters.sourceFilter === "discover") {
+    result = result.filter((m) => m.source === "discover");
+  }
 
   // Filter by month
   if (filters.month) {
@@ -40,6 +54,17 @@ function filterMovies(movies: MovieSummary[], filters: MovieFilters): MovieSumma
 
   // Sort
   switch (filters.sortBy) {
+    case "list_ranking":
+      // List items first (by ranking), then discover items by popularity
+      result.sort((a, b) => {
+        if (a.source === "list" && b.source === "list") {
+          return (a.listRanking ?? 999) - (b.listRanking ?? 999);
+        }
+        if (a.source === "list") return -1;
+        if (b.source === "list") return 1;
+        return 0; // keep discover in original (popularity) order
+      });
+      break;
     case "release_date":
       result.sort((a, b) => a.releaseDate.localeCompare(b.releaseDate));
       break;
@@ -51,7 +76,6 @@ function filterMovies(movies: MovieSummary[], filters: MovieFilters): MovieSumma
       break;
     case "popularity":
     default:
-      // Keep the original order from the API (sorted by popularity)
       break;
   }
 
@@ -64,15 +88,18 @@ export default function MoviesPage() {
 
   const filteredMovies = useMemo(
     () => filterMovies(movies, filters),
-    [movies, filters],
+    [movies, filters]
   );
+
+  const listCount = movies.filter((m) => m.source === "list").length;
+  const discoverCount = movies.filter((m) => m.source === "discover").length;
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Movies</h1>
         <p className="mt-1 text-muted-foreground">
-          Browse all tracked 2026 releases
+          {listCount} on your list, {discoverCount} upcoming discoveries
         </p>
       </div>
 

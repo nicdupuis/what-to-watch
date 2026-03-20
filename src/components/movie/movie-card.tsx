@@ -37,12 +37,22 @@ function MovieCard({ movie }: MovieCardProps) {
             className="w-full rounded-b-none"
           />
           {movie.watched && <WatchedBadge rating={movie.userRating} />}
+          {movie.source === "list" && movie.listRanking && (
+            <div className="absolute top-2 left-2 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground shadow">
+              {movie.listRanking}
+            </div>
+          )}
         </div>
         <CardContent className="p-3">
           <h3 className="truncate text-sm font-semibold">{movie.title}</h3>
           {movie.releaseDate && (
             <p className="mt-1 text-xs text-muted-foreground">
               {formatDate(movie.releaseDate)}
+            </p>
+          )}
+          {movie.ownerRating !== null && (
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Ranked: {movie.ownerRating}/10
             </p>
           )}
           {genres.length > 0 && (

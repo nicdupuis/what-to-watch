@@ -10,6 +10,7 @@ export interface MovieFilters {
   genre: string;
   watchedFilter: string;
   sortBy: string;
+  sourceFilter: string;
 }
 
 export interface MovieFiltersProps {
@@ -46,7 +47,14 @@ const SORT_OPTIONS = [
   { value: "popularity", label: "Popularity" },
   { value: "release_date", label: "Release Date" },
   { value: "rating", label: "Rating" },
+  { value: "list_ranking", label: "List Ranking" },
   { value: "title", label: "Title" },
+];
+
+const SOURCE_OPTIONS = [
+  { value: "all", label: "All" },
+  { value: "list", label: "My List" },
+  { value: "discover", label: "Upcoming" },
 ];
 
 const WATCHED_OPTIONS = [
@@ -86,6 +94,12 @@ function MovieFiltersBar({
         onChange={(value) => updateFilter("genre", value)}
         options={GENRE_OPTIONS}
         className="w-40"
+      />
+
+      <ToggleGroup
+        options={SOURCE_OPTIONS}
+        value={filters.sourceFilter}
+        onChange={(value) => updateFilter("sourceFilter", value as string)}
       />
 
       <ToggleGroup

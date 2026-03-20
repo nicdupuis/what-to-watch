@@ -14,4 +14,5 @@ export interface LetterboxdListEntry {
   filmUrl: string;
   filmSlug: string;
   position: number;
+  ownerRating: number | null; // 1-10 scale from ranked lists
 }

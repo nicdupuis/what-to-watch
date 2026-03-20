@@ -9,6 +9,10 @@ export interface MovieSummary {
   watched: boolean;
   userRating: number | null;
   watchedDate: string | null;
+  listRanking: number | null; // position in the user's Letterboxd list
+  ownerRating: number | null; // 1-10 rating from ranked Letterboxd list
+  letterboxdSlug: string | null;
+  source: "list" | "discover"; // where this movie came from
 }
 
 export interface MovieDetail extends MovieSummary {

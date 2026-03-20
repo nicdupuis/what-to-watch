@@ -46,7 +46,8 @@ export async function parseRSS(
     let review: string | null = null;
     const reviewMatch = desc.match(/<p>(.+?)<\/p>/g);
     if (reviewMatch && reviewMatch.length > 1) {
-      review = reviewMatch[reviewMatch.length - 1].replace(/<[^>]+>/g, "").trim();
+      review =
+        reviewMatch[reviewMatch.length - 1].replace(/<[^>]+>/g, "").trim();
     }
 
     entries.push({
@@ -63,6 +64,13 @@ export async function parseRSS(
   return entries;
 }
 
+/**
+ * Scrapes a Letterboxd user list. Letterboxd uses React lazy-loaded posters
+ * with data attributes on `li.posteritem` elements:
+ *   - data-item-name: "Title (Year)"
+ *   - data-item-slug: "film-slug"
+ *   - data-owner-rating: "1"-"10" (on ranked lists)
+ */
 export async function scrapeList(
   username: string,
   listSlug: string
@@ -83,36 +91,45 @@ export async function scrapeList(
     });
 
     if (!res.ok) {
-      if (page === 1) throw new Error(`Letterboxd list scrape failed: ${res.status}`);
+      if (page === 1)
+        throw new Error(`Letterboxd list scrape failed: ${res.status}`);
       break;
     }
 
     const html = await res.text();
     const $ = cheerio.load(html);
 
-    const films = $("li.poster-container");
+    // Letterboxd lists use li.posteritem with a nested div.react-component
+    // that carries all the film metadata as data-* attributes.
+    const films = $("li.posteritem");
     if (films.length === 0) {
       hasMore = false;
       break;
     }
 
-    films.each((i, el) => {
-      const poster = $(el).find("div.film-poster");
-      const filmSlug = poster.attr("data-film-slug") || "";
-      const filmTitle =
-        poster.find("img").attr("alt") || "";
-      const filmYear = parseInt(
-        poster.attr("data-film-release-year") || "0",
-        10
-      );
+    films.each((_i, el) => {
+      const li = $(el);
+      const reactDiv = li.find("div.react-component");
+
+      const itemName = reactDiv.attr("data-item-name") || "";
+      const filmSlug = reactDiv.attr("data-item-slug") || "";
+      const ownerRatingStr = li.attr("data-owner-rating");
+      const ownerRating = ownerRatingStr ? parseInt(ownerRatingStr, 10) : null;
+
+      // data-item-name is "Title (Year)" — parse it
+      const nameMatch = itemName.match(/^(.+?)\s*\((\d{4})\)$/);
+      const title = nameMatch ? nameMatch[1].trim() : itemName;
+      const year = nameMatch ? parseInt(nameMatch[2], 10) : 0;
+
       const filmUrl = `https://letterboxd.com/film/${filmSlug}/`;
 
       entries.push({
-        title: filmTitle,
-        year: filmYear,
+        title,
+        year,
         filmUrl,
         filmSlug,
         position: entries.length + 1,
+        ownerRating,
       });
     });
 
@@ -125,6 +142,9 @@ export async function scrapeList(
   return entries;
 }
 
+/**
+ * Scrapes films tagged by a user. Uses the same posteritem structure as lists.
+ */
 export async function scrapeTaggedFilms(
   username: string,
   tag: string
@@ -145,35 +165,40 @@ export async function scrapeTaggedFilms(
     });
 
     if (!res.ok) {
-      if (page === 1) throw new Error(`Letterboxd tag scrape failed: ${res.status}`);
+      if (page === 1)
+        throw new Error(`Letterboxd tag scrape failed: ${res.status}`);
       break;
     }
 
     const html = await res.text();
     const $ = cheerio.load(html);
 
-    const films = $("li.poster-container");
+    const films = $("li.posteritem");
     if (films.length === 0) {
       hasMore = false;
       break;
     }
 
-    films.each((i, el) => {
-      const poster = $(el).find("div.film-poster");
-      const filmSlug = poster.attr("data-film-slug") || "";
-      const filmTitle = poster.find("img").attr("alt") || "";
-      const filmYear = parseInt(
-        poster.attr("data-film-release-year") || "0",
-        10
-      );
+    films.each((_i, el) => {
+      const li = $(el);
+      const reactDiv = li.find("div.react-component");
+
+      const itemName = reactDiv.attr("data-item-name") || "";
+      const filmSlug = reactDiv.attr("data-item-slug") || "";
+
+      const nameMatch = itemName.match(/^(.+?)\s*\((\d{4})\)$/);
+      const title = nameMatch ? nameMatch[1].trim() : itemName;
+      const year = nameMatch ? parseInt(nameMatch[2], 10) : 0;
+
       const filmUrl = `https://letterboxd.com/film/${filmSlug}/`;
 
       entries.push({
-        title: filmTitle,
-        year: filmYear,
+        title,
+        year,
         filmUrl,
         filmSlug,
         position: entries.length + 1,
+        ownerRating: null,
       });
     });
 

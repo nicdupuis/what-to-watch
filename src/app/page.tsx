@@ -54,11 +54,14 @@ export default function HomePage() {
   }
 
   const today = new Date().toISOString().split("T")[0];
+  const listMovies = movies.filter((m) => m.source === "list");
+  const discoverMovies = movies.filter((m) => m.source === "discover");
   const watchedMovies = movies.filter((m) => m.watched);
-  const totalCount = movies.length;
+  const listCount = listMovies.length;
   const watchedCount = watchedMovies.length;
+  const totalCount = movies.length;
   const completionPct =
-    totalCount > 0 ? Math.round((watchedCount / totalCount) * 100) : 0;
+    listCount > 0 ? Math.round((watchedCount / listCount) * 100) : 0;
   const avgRating =
     watchedMovies.filter((m) => m.userRating !== null && m.userRating > 0)
       .length > 0
@@ -108,12 +111,15 @@ export default function HomePage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Tracked
+                On Your List
               </CardTitle>
               <Film className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalCount}</div>
+              <div className="text-2xl font-bold">{listCount}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                +{discoverMovies.length} upcoming
+              </p>
             </CardContent>
           </Card>
 
@@ -125,7 +131,12 @@ export default function HomePage() {
               <Eye className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{watchedCount}</div>
+              <div className="text-2xl font-bold">
+                {watchedCount}
+                <span className="text-sm font-normal text-muted-foreground">
+                  /{listCount}
+                </span>
+              </div>
             </CardContent>
           </Card>
 
