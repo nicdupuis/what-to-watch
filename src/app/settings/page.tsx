@@ -1,9 +1,9 @@
 "use client";
 
-import { useSettings } from "@/hooks/use-settings";
+import { useSettings, SavedTheatre } from "@/hooks/use-settings";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Save, MapPin, Search, Check } from "lucide-react";
+import { Save, MapPin, Search, X } from "lucide-react";
 import { useState, useMemo } from "react";
 import useSWR from "swr";
 
@@ -24,8 +24,7 @@ export default function SettingsPage() {
   const { settings, setSettings, loaded } = useSettings();
   const [saved, setSaved] = useState(false);
   const [theatreSearch, setTheatreSearch] = useState("");
-  const [selectedTheatreId, setSelectedTheatreId] = useState<number | null>(null);
-  const [selectedTheatreName, setSelectedTheatreName] = useState("");
+  const [savedTheatres, setSavedTheatres] = useState<SavedTheatre[]>([]);
 
   const { data: theatres, isLoading: theatresLoading } = useSWR<Theatre[]>(
     "/api/cineplex/theatres",
@@ -36,9 +35,25 @@ export default function SettingsPage() {
   // Initialize local state from settings once loaded
   const [initialized, setInitialized] = useState(false);
   if (loaded && !initialized) {
-    setSelectedTheatreId(settings.theatreId);
-    setSelectedTheatreName(settings.theatreName);
+    // Migrate from single theatre to savedTheatres if needed
+    if (settings.savedTheatres.length > 0) {
+      setSavedTheatres(settings.savedTheatres);
+    } else if (settings.theatreId && settings.theatreName) {
+      setSavedTheatres([{ id: settings.theatreId, name: settings.theatreName }]);
+    }
     setInitialized(true);
+  }
+
+  const MAX_THEATRES = 5;
+
+  function addTheatre(id: number, name: string) {
+    if (savedTheatres.length >= MAX_THEATRES) return;
+    if (savedTheatres.some((t) => t.id === id)) return;
+    setSavedTheatres((prev) => [...prev, { id, name }]);
+  }
+
+  function removeTheatre(id: number) {
+    setSavedTheatres((prev) => prev.filter((t) => t.id !== id));
   }
 
   const filteredTheatres = useMemo(() => {
@@ -57,14 +72,16 @@ export default function SettingsPage() {
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
+    const primary = savedTheatres[0] ?? null;
     setSettings({
       letterboxdUsername: (form.get("letterboxdUsername") as string).trim(),
       listSlug: (form.get("listSlug") as string).trim(),
       anticipatedListUrl: (form.get("anticipatedListUrl") as string).trim(),
       tag: (form.get("tag") as string).trim(),
       city: (form.get("city") as string).trim(),
-      theatreId: selectedTheatreId,
-      theatreName: selectedTheatreName,
+      theatreId: primary?.id ?? null,
+      theatreName: primary?.name ?? "",
+      savedTheatres,
     });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -162,17 +179,35 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MapPin className="h-5 w-5" />
-              Theater
+              Theatres
             </CardTitle>
             <CardDescription>
-              Select your preferred Cineplex theatre for showtimes
+              Select up to {MAX_THEATRES} Cineplex theatres for showtimes (first is default)
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {selectedTheatreName && (
-              <div className="flex items-center gap-2 p-3 rounded-md bg-primary/10 border border-primary/20">
-                <Check className="h-4 w-4 text-primary shrink-0" />
-                <span className="text-sm font-medium">{selectedTheatreName}</span>
+            {/* Saved theatre chips */}
+            {savedTheatres.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {savedTheatres.map((t, idx) => (
+                  <span
+                    key={t.id}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-primary/10 text-primary border border-primary/20"
+                  >
+                    {idx === 0 && (
+                      <MapPin className="h-3 w-3 shrink-0" />
+                    )}
+                    {t.name}
+                    <button
+                      type="button"
+                      onClick={() => removeTheatre(t.id)}
+                      className="ml-0.5 rounded-full p-0.5 hover:bg-primary/20 transition-colors"
+                      aria-label={`Remove ${t.name}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
               </div>
             )}
 
@@ -197,26 +232,34 @@ export default function SettingsPage() {
                   {theatreSearch ? "No theatres match your search" : "No theatres available"}
                 </div>
               ) : (
-                filteredTheatres.map((theatre) => (
-                  <button
-                    key={theatre.theatreId}
-                    type="button"
-                    onClick={() => {
-                      setSelectedTheatreId(theatre.theatreId);
-                      setSelectedTheatreName(theatre.theatreName);
-                    }}
-                    className={`w-full text-left px-3 py-2.5 text-sm transition-colors hover:bg-accent/50 ${
-                      selectedTheatreId === theatre.theatreId
-                        ? "bg-primary/10 text-primary font-medium"
-                        : ""
-                    }`}
-                  >
-                    <div className="font-medium">{theatre.theatreName}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      {theatre.location.address}
-                    </div>
-                  </button>
-                ))
+                filteredTheatres.map((theatre) => {
+                  const isSelected = savedTheatres.some((t) => t.id === theatre.theatreId);
+                  const isFull = savedTheatres.length >= MAX_THEATRES;
+                  return (
+                    <button
+                      key={theatre.theatreId}
+                      type="button"
+                      disabled={!isSelected && isFull}
+                      onClick={() => {
+                        if (isSelected) {
+                          removeTheatre(theatre.theatreId);
+                        } else {
+                          addTheatre(theatre.theatreId, theatre.theatreName);
+                        }
+                      }}
+                      className={`w-full text-left px-3 py-2.5 text-sm transition-colors hover:bg-accent/50 disabled:opacity-50 disabled:cursor-not-allowed ${
+                        isSelected
+                          ? "bg-primary/10 text-primary font-medium"
+                          : ""
+                      }`}
+                    >
+                      <div className="font-medium">{theatre.theatreName}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {theatre.location.address}
+                      </div>
+                    </button>
+                  );
+                })
               )}
             </div>
 

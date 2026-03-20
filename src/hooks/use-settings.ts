@@ -2,6 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 
+export interface SavedTheatre {
+  id: number;
+  name: string;
+}
+
 export interface UserSettings {
   letterboxdUsername: string;
   tmdbApiKey: string;
@@ -11,6 +16,7 @@ export interface UserSettings {
   city: string;
   theatreId: number | null;
   theatreName: string;
+  savedTheatres: SavedTheatre[];
 }
 
 const STORAGE_KEY = "what-to-watch-settings";
@@ -24,6 +30,7 @@ const defaultSettings: UserSettings = {
   city: "",
   theatreId: null,
   theatreName: "",
+  savedTheatres: [],
 };
 
 export function useSettings() {

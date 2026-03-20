@@ -20,7 +20,11 @@ import {
   ArrowRight,
   Sparkles,
   RefreshCw,
+  Share2,
 } from "lucide-react";
+import { GenreChart } from "@/components/dashboard/genre-chart";
+import { MonthlyChart } from "@/components/dashboard/monthly-chart";
+import { RatingsChart } from "@/components/dashboard/ratings-chart";
 
 export default function HomePage() {
   const { settings, isConfigured, loaded } = useSettings();
@@ -205,6 +209,49 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* Charts: Your 2026 at a Glance */}
+      {!isLoading && movies.length > 0 && (
+        <section>
+          <h2 className="mb-4 text-lg font-semibold">
+            Your 2026 at a Glance
+          </h2>
+          <div className="grid gap-4 lg:grid-cols-3">
+            <Card className="lg:col-span-1">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Top Genres
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <GenreChart movies={movies} />
+              </CardContent>
+            </Card>
+
+            <Card className="lg:col-span-1">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Releases by Month
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <MonthlyChart movies={movies} />
+              </CardContent>
+            </Card>
+
+            <Card className="lg:col-span-1">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Source Breakdown
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RatingsChart movies={movies} />
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      )}
+
       {/* Upcoming This Month */}
       {upcoming.length > 0 && (
         <section>
@@ -309,6 +356,12 @@ export default function HomePage() {
             <Button variant="outline" className="h-auto w-full flex-col gap-2 py-4">
               <Star className="h-5 w-5" />
               <span>Festivals</span>
+            </Button>
+          </Link>
+          <Link href="/poster-grid">
+            <Button variant="outline" className="h-auto w-full flex-col gap-2 py-4">
+              <Share2 className="h-5 w-5" />
+              <span>Share Grid</span>
             </Button>
           </Link>
         </div>

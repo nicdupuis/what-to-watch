@@ -14,6 +14,7 @@ const navLinks = [
   { href: "/festivals", label: "Festivals" },
   { href: "/awards", label: "Awards" },
   { href: "/showtimes", label: "Showtimes" },
+  { href: "/poster-grid", label: "Share" },
 ];
 
 export function SiteHeader() {
