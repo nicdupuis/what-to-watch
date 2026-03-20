@@ -82,7 +82,7 @@ export default function CalendarPage() {
         (m) =>
           m.source === "watched-list" ||
           m.source === "anticipated" ||
-          m.popularity >= 50
+          (m.popularity >= 50 && m.voteAverage >= 5)
       );
     }
     return result;
