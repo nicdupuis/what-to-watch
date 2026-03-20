@@ -59,6 +59,7 @@ export async function getMovieBasic(id: number): Promise<TMDBMovie | null> {
       genre_ids: (data.genres ?? []).map((g: { id: number }) => g.id),
       overview: data.overview,
       vote_average: data.vote_average,
+      vote_count: data.vote_count ?? 0,
       backdrop_path: data.backdrop_path,
       popularity: data.popularity,
     };

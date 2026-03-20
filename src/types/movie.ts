@@ -44,6 +44,7 @@ export interface TMDBMovie {
   genre_ids: number[];
   overview: string;
   vote_average: number;
+  vote_count: number;
   backdrop_path: string | null;
   popularity: number;
 }
