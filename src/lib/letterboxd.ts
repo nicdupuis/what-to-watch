@@ -74,31 +74,46 @@ export async function parseRSS(
   return entries;
 }
 
+const ALLOWED_DOMAINS = ["letterboxd.com", "boxd.it"];
+
+function isAllowedUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return (
+      (parsed.protocol === "https:" || parsed.protocol === "http:") &&
+      ALLOWED_DOMAINS.some((d) => parsed.hostname === d || parsed.hostname.endsWith(`.${d}`))
+    );
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Resolves a Letterboxd share link (boxd.it or full share URL) to the
- * canonical scrape-able URL. Returns the resolved URL or the input if
- * it's already a direct list URL.
+ * canonical scrape-able URL. Only allows letterboxd.com and boxd.it domains.
  */
 async function resolveListUrl(input: string): Promise<string> {
   const trimmed = input.trim();
 
   // Already a full letterboxd.com list URL (with or without share token)
   if (trimmed.includes("letterboxd.com/") && trimmed.includes("/list/")) {
+    if (!isAllowedUrl(trimmed)) throw new Error("Invalid URL domain");
     return trimmed.replace(/\/$/, "");
   }
 
   // boxd.it short link — follow redirects to get the real URL
   if (trimmed.includes("boxd.it/")) {
+    if (!isAllowedUrl(trimmed)) throw new Error("Invalid URL domain");
     const res = await fetch(trimmed, {
       redirect: "follow",
       headers: { "User-Agent": "OscarTracker/1.0" },
     });
-    // The final URL after redirects is the canonical one
     const finalUrl = res.url;
-    if (finalUrl.includes("letterboxd.com/")) {
-      return finalUrl.replace(/\/$/, "");
+    // Verify the redirect target is also on an allowed domain
+    if (!isAllowedUrl(finalUrl)) {
+      throw new Error("Share link redirected to unauthorized domain");
     }
-    throw new Error(`Could not resolve share link: ${trimmed}`);
+    return finalUrl.replace(/\/$/, "");
   }
 
   // Assume it's a slug like "top-2026" — caller should handle this

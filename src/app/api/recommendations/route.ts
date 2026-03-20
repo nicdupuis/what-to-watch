@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rate-limit";
 import { scrapeAllWatchedFilms, scrapeRatedFilms } from "@/lib/letterboxd";
 import { getRecommendations } from "@/lib/tmdb";
 import { TMDBMovie } from "@/types/movie";
@@ -49,6 +50,12 @@ async function resolveSingleTmdbId(filmSlug: string): Promise<number | null> {
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for") ?? "anonymous";
+  const { allowed } = rateLimit(`recs:${ip}`, 3, 3); // 3 requests, refill 3/min
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const username = searchParams.get("username");

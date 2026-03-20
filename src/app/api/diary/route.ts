@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rate-limit";
 import { parseRSS } from "@/lib/letterboxd";
 import { getMovieCredits, searchMovie } from "@/lib/tmdb";
 
@@ -15,6 +16,12 @@ interface DiaryMovie {
 }
 
 export async function GET(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for") ?? "anonymous";
+  const { allowed } = rateLimit(`diary:${ip}`, 5, 5);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   try {
     const username = request.nextUrl.searchParams.get("username");
     if (!username) {

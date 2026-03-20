@@ -1,5 +1,5 @@
 const API_BASE = "https://apis.cineplex.com/prod/cpx/theatrical/api/v1";
-const API_KEY = "dcdac5601d864addbc2675a2e96cb1f8";
+const API_KEY = process.env.CINEPLEX_API_KEY ?? "";
 
 function cpxFetch(path: string, revalidate: number = 1800) {
   return fetch(`${API_BASE}${path}`, {

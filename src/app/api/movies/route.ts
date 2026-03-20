@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { discoverAllMovies, getMovieBasic, getMovieCredits, getWatchProviders } from "@/lib/tmdb";
+import { rateLimit } from "@/lib/rate-limit";
+import { discoverAllMovies, getMovieBasic, getMovieExtras } from "@/lib/tmdb";
 import { parseRSS, scrapeList, scrapeTaggedFilms } from "@/lib/letterboxd";
 import { MovieSummary, TMDBMovie } from "@/types/movie";
 import { LetterboxdEntry, LetterboxdListEntry } from "@/types/letterboxd";
@@ -57,6 +58,12 @@ async function enrichWithTMDB(
 }
 
 export async function GET(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for") ?? "anonymous";
+  const { allowed } = rateLimit(`movies:${ip}`, 5, 5); // 5 requests, refill 5/min
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const username = searchParams.get("username");
@@ -278,32 +285,23 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 8. Batch-fetch credits for all movies with a valid tmdbId
+    // 8. Batch-fetch credits + providers in ONE call per movie (via append_to_response)
+    //    This halves the TMDB API calls vs the old separate credits + providers fetches.
     const moviesToFetch = results.filter((m) => m.tmdbId > 0);
     const BATCH_SIZE = 20;
     for (let i = 0; i < moviesToFetch.length; i += BATCH_SIZE) {
       const batch = moviesToFetch.slice(i, i + BATCH_SIZE);
-      const creditResults = await Promise.all(
-        batch.map((m) => getMovieCredits(m.tmdbId))
+      const extras = await Promise.all(
+        batch.map((m) => getMovieExtras(m.tmdbId))
       );
       for (let j = 0; j < batch.length; j++) {
-        batch[j].directors = creditResults[j].directors;
-        batch[j].topCast = creditResults[j].topCast;
+        batch[j].directors = extras[j].directors;
+        batch[j].topCast = extras[j].topCast;
+        batch[j].streamingProviders = extras[j].streamingProviders;
       }
     }
 
-    // 9. Batch-fetch watch providers for all movies with a valid tmdbId
-    for (let i = 0; i < moviesToFetch.length; i += BATCH_SIZE) {
-      const batch = moviesToFetch.slice(i, i + BATCH_SIZE);
-      const providerResults = await Promise.all(
-        batch.map((m) => getWatchProviders(m.tmdbId))
-      );
-      for (let j = 0; j < batch.length; j++) {
-        batch[j].streamingProviders = providerResults[j];
-      }
-    }
-
-    // 10. Set isReleased based on releaseDate <= today
+    // 9. Set isReleased based on releaseDate <= today
     for (const movie of results) {
       movie.isReleased = !!(movie.releaseDate && movie.releaseDate <= today);
     }

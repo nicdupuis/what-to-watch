@@ -78,53 +78,73 @@ export async function getMovie(id: number): Promise<TMDBMovieDetail> {
   return res.json();
 }
 
+/**
+ * Fetches credits + watch providers in a SINGLE call using append_to_response.
+ * This halves the number of TMDB API calls vs separate getMovieCredits + getWatchProviders.
+ */
+export async function getMovieExtras(id: number): Promise<{
+  directors: string[];
+  topCast: string[];
+  streamingProviders: { name: string; logoPath: string }[];
+}> {
+  try {
+    const res = await tmdbFetch(
+      `/movie/${id}?append_to_response=credits,watch/providers`,
+      86400
+    );
+    if (!res.ok) return { directors: [], topCast: [], streamingProviders: [] };
+    const data = await res.json();
+
+    // Extract credits
+    const directors = (data.credits?.crew ?? [])
+      .filter((c: { job: string }) => c.job === "Director")
+      .map((c: { name: string }) => c.name);
+    const topCast = (data.credits?.cast ?? [])
+      .sort((a: { order: number }, b: { order: number }) => a.order - b.order)
+      .slice(0, 3)
+      .map((c: { name: string }) => c.name);
+
+    // Extract Canadian streaming providers
+    const ca = data["watch/providers"]?.results?.CA;
+    let streamingProviders: { name: string; logoPath: string }[] = [];
+    if (ca) {
+      const all = [
+        ...(ca.flatrate ?? []),
+        ...(ca.ads ?? []),
+        ...(ca.free ?? []),
+      ];
+      const seen = new Set<string>();
+      streamingProviders = all
+        .filter((p: { provider_name: string }) => {
+          if (seen.has(p.provider_name)) return false;
+          seen.add(p.provider_name);
+          return true;
+        })
+        .map((p: { provider_name: string; logo_path: string }) => ({
+          name: p.provider_name,
+          logoPath: p.logo_path,
+        }));
+    }
+
+    return { directors, topCast, streamingProviders };
+  } catch {
+    return { directors: [], topCast: [], streamingProviders: [] };
+  }
+}
+
+// Keep these as convenience wrappers for callers that only need one
 export async function getMovieCredits(
   id: number
 ): Promise<{ directors: string[]; topCast: string[] }> {
-  const res = await tmdbFetch(`/movie/${id}/credits`, 86400);
-  if (!res.ok) {
-    return { directors: [], topCast: [] };
-  }
-  const data = await res.json();
-  const directors = (data.crew ?? [])
-    .filter((c: { job: string; name: string }) => c.job === "Director")
-    .map((c: { name: string }) => c.name);
-  const topCast = (data.cast ?? [])
-    .sort((a: { order: number }, b: { order: number }) => a.order - b.order)
-    .slice(0, 3)
-    .map((c: { name: string }) => c.name);
+  const { directors, topCast } = await getMovieExtras(id);
   return { directors, topCast };
 }
 
 export async function getWatchProviders(
   id: number
 ): Promise<{ name: string; logoPath: string }[]> {
-  try {
-    const res = await tmdbFetch(`/movie/${id}/watch/providers`, 86400);
-    if (!res.ok) return [];
-    const data = await res.json();
-    const ca = data.results?.CA;
-    if (!ca) return [];
-    // Combine flatrate + ads + free, deduplicate by name
-    const all = [
-      ...(ca.flatrate ?? []),
-      ...(ca.ads ?? []),
-      ...(ca.free ?? []),
-    ];
-    const seen = new Set<string>();
-    return all
-      .filter((p: { provider_name: string }) => {
-        if (seen.has(p.provider_name)) return false;
-        seen.add(p.provider_name);
-        return true;
-      })
-      .map((p: { provider_name: string; logo_path: string }) => ({
-        name: p.provider_name,
-        logoPath: p.logo_path,
-      }));
-  } catch {
-    return [];
-  }
+  const { streamingProviders } = await getMovieExtras(id);
+  return streamingProviders;
 }
 
 export async function getUpcoming(): Promise<TMDBDiscoverResponse> {
