@@ -253,8 +253,15 @@ export default function TVPage() {
   const isLoading = tab === "trending" ? trendingLoading : discoverLoading;
   const rawShows = tab === "trending" ? trendingData : discoverData;
 
-  // Trending: top 10 only. Discover: top 20.
-  const shows = rawShows?.slice(0, tab === "trending" ? 10 : 20) ?? [];
+  // Filter out anime (Japanese animation)
+  const filtered = (rawShows ?? []).filter((s) => {
+    const isAnimation = (s.genre_ids ?? []).includes(16);
+    const isJapanese = (s.origin_country ?? []).includes("JP");
+    return !(isAnimation && isJapanese);
+  });
+
+  // Trending: top 15. Discover: top 20.
+  const shows = filtered.slice(0, tab === "trending" ? 15 : 20);
 
   const closeModal = useCallback(() => setSelectedShow(null), []);
 
@@ -264,7 +271,7 @@ export default function TVPage() {
         <h1 className="text-3xl font-bold">TV Shows</h1>
         <p className="mt-1 text-muted-foreground">
           {tab === "trending"
-            ? "Top 10 trending shows this week"
+            ? "Top 15 trending shows this week"
             : "Popular new and ongoing shows (2025+)"}
         </p>
       </div>
