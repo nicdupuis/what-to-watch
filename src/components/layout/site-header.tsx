@@ -12,6 +12,7 @@ const navLinks = [
   { href: "/movies", label: "Movies" },
   { href: "/calendar", label: "Calendar" },
   { href: "/festivals", label: "Festivals" },
+  { href: "/showtimes", label: "Showtimes" },
 ];
 
 export function SiteHeader() {

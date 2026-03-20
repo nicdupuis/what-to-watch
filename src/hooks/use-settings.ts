@@ -9,6 +9,8 @@ export interface UserSettings {
   anticipatedListUrl: string;
   tag: string;
   city: string;
+  theatreId: number | null;
+  theatreName: string;
 }
 
 const STORAGE_KEY = "what-to-watch-settings";
@@ -20,6 +22,8 @@ const defaultSettings: UserSettings = {
   anticipatedListUrl: "",
   tag: "top2026",
   city: "",
+  theatreId: null,
+  theatreName: "",
 };
 
 export function useSettings() {
