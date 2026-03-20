@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useMovies } from "@/hooks/use-movies";
 import { useSettings } from "@/hooks/use-settings";
@@ -18,11 +19,14 @@ import {
   CheckCircle,
   Settings,
   ArrowRight,
+  Sparkles,
+  RefreshCw,
 } from "lucide-react";
 
 export default function HomePage() {
   const { settings, isConfigured, loaded } = useSettings();
-  const { movies, isLoading } = useMovies();
+  const { movies, isLoading, mutate } = useMovies();
+  const [refreshing, setRefreshing] = useState(false);
 
   if (!loaded) return null;
 
@@ -54,14 +58,20 @@ export default function HomePage() {
   }
 
   const today = new Date().toISOString().split("T")[0];
-  const listMovies = movies.filter((m) => m.source === "list");
+  const watchedListMovies = movies.filter((m) => m.source === "watched-list");
+  const anticipatedMovies = movies.filter((m) => m.source === "anticipated");
   const discoverMovies = movies.filter((m) => m.source === "discover");
   const watchedMovies = movies.filter((m) => m.watched);
-  const listCount = listMovies.length;
   const watchedCount = watchedMovies.length;
-  const totalCount = movies.length;
+  const anticipatedCount = anticipatedMovies.length;
+  const totalTracked = watchedListMovies.length + anticipatedCount;
   const completionPct =
-    listCount > 0 ? Math.round((watchedCount / listCount) * 100) : 0;
+    totalTracked > 0 ? Math.round((watchedCount / totalTracked) * 100) : 0;
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    try { await mutate(); } finally { setRefreshing(false); }
+  }
   const avgRating =
     watchedMovies.filter((m) => m.userRating !== null && m.userRating > 0)
       .length > 0
@@ -84,11 +94,24 @@ export default function HomePage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="mt-1 text-muted-foreground">
-          Your 2026 Oscar season at a glance
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="mt-1 text-muted-foreground">
+            Your 2026 Oscar season at a glance
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={refreshing || isLoading}
+        >
+          <RefreshCw
+            className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+          />
+          Refresh
+        </Button>
       </div>
 
       {/* Stats Row */}
@@ -111,14 +134,14 @@ export default function HomePage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                On Your List
+                Watched
               </CardTitle>
-              <Film className="h-4 w-4 text-muted-foreground" />
+              <Eye className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{listCount}</div>
+              <div className="text-2xl font-bold">{watchedCount}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                +{discoverMovies.length} upcoming
+                ranked on your list
               </p>
             </CardContent>
           </Card>
@@ -126,17 +149,15 @@ export default function HomePage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Watched
+                Anticipated
               </CardTitle>
-              <Eye className="h-4 w-4 text-muted-foreground" />
+              <Sparkles className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {watchedCount}
-                <span className="text-sm font-normal text-muted-foreground">
-                  /{listCount}
-                </span>
-              </div>
+              <div className="text-2xl font-bold">{anticipatedCount}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                +{discoverMovies.length} to discover
+              </p>
             </CardContent>
           </Card>
 

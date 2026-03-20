@@ -37,9 +37,14 @@ function MovieCard({ movie }: MovieCardProps) {
             className="w-full rounded-b-none"
           />
           {movie.watched && <WatchedBadge rating={movie.userRating} />}
-          {movie.source === "list" && movie.listRanking && (
+          {movie.source === "watched-list" && movie.listRanking && (
             <div className="absolute top-2 left-2 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground shadow">
               {movie.listRanking}
+            </div>
+          )}
+          {movie.anticipated && !movie.watched && (
+            <div className="absolute top-2 left-2 rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white shadow">
+              Anticipated
             </div>
           )}
         </div>

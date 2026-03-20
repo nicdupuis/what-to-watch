@@ -7,6 +7,8 @@ import {
   MovieFiltersBar,
   type MovieFilters,
 } from "@/components/movie/movie-filters";
+import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
 import type { MovieSummary } from "@/types/movie";
 
 const defaultFilters: MovieFilters = {
@@ -24,10 +26,8 @@ function filterMovies(
   let result = [...movies];
 
   // Filter by source
-  if (filters.sourceFilter === "list") {
-    result = result.filter((m) => m.source === "list");
-  } else if (filters.sourceFilter === "discover") {
-    result = result.filter((m) => m.source === "discover");
+  if (filters.sourceFilter !== "all") {
+    result = result.filter((m) => m.source === filters.sourceFilter);
   }
 
   // Filter by month
@@ -55,14 +55,16 @@ function filterMovies(
   // Sort
   switch (filters.sortBy) {
     case "list_ranking":
-      // List items first (by ranking), then discover items by popularity
       result.sort((a, b) => {
-        if (a.source === "list" && b.source === "list") {
+        // Watched list first (by ranking), then anticipated, then discover
+        const sourceOrder = { "watched-list": 0, anticipated: 1, discover: 2 };
+        const aSrc = sourceOrder[a.source] ?? 2;
+        const bSrc = sourceOrder[b.source] ?? 2;
+        if (aSrc !== bSrc) return aSrc - bSrc;
+        if (a.source === "watched-list" && b.source === "watched-list") {
           return (a.listRanking ?? 999) - (b.listRanking ?? 999);
         }
-        if (a.source === "list") return -1;
-        if (b.source === "list") return 1;
-        return 0; // keep discover in original (popularity) order
+        return 0;
       });
       break;
     case "release_date":
@@ -83,24 +85,49 @@ function filterMovies(
 }
 
 export default function MoviesPage() {
-  const { movies, isLoading } = useMovies();
+  const { movies, isLoading, mutate } = useMovies();
   const [filters, setFilters] = useState<MovieFilters>(defaultFilters);
+  const [refreshing, setRefreshing] = useState(false);
 
   const filteredMovies = useMemo(
     () => filterMovies(movies, filters),
     [movies, filters]
   );
 
-  const listCount = movies.filter((m) => m.source === "list").length;
+  const watchedCount = movies.filter((m) => m.source === "watched-list").length;
+  const anticipatedCount = movies.filter((m) => m.source === "anticipated").length;
   const discoverCount = movies.filter((m) => m.source === "discover").length;
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    try {
+      // Bust the server cache by adding a timestamp
+      await mutate();
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Movies</h1>
-        <p className="mt-1 text-muted-foreground">
-          {listCount} on your list, {discoverCount} upcoming discoveries
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Movies</h1>
+          <p className="mt-1 text-muted-foreground">
+            {watchedCount} watched, {anticipatedCount} anticipated, {discoverCount} to discover
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={refreshing}
+        >
+          <RefreshCw
+            className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+          />
+          {refreshing ? "Refreshing..." : "Refresh"}
+        </Button>
       </div>
 
       <MovieFiltersBar filters={filters} onFilterChange={setFilters} />

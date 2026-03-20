@@ -14,6 +14,7 @@ export function useMovies() {
     year: "2026",
   });
   if (settings.listSlug) params.set("listSlug", settings.listSlug);
+  if (settings.anticipatedListUrl) params.set("anticipatedListUrl", settings.anticipatedListUrl);
   if (settings.tag) params.set("tag", settings.tag);
 
   const { data, error, isLoading, mutate } = useSWR<MovieSummary[]>(

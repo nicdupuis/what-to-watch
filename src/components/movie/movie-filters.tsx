@@ -53,8 +53,9 @@ const SORT_OPTIONS = [
 
 const SOURCE_OPTIONS = [
   { value: "all", label: "All" },
-  { value: "list", label: "My List" },
-  { value: "discover", label: "Upcoming" },
+  { value: "watched-list", label: "Watched" },
+  { value: "anticipated", label: "Anticipated" },
+  { value: "discover", label: "Discover" },
 ];
 
 const WATCHED_OPTIONS = [

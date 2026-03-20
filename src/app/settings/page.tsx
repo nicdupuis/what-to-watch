@@ -18,6 +18,7 @@ export default function SettingsPage() {
     setSettings({
       letterboxdUsername: (form.get("letterboxdUsername") as string).trim(),
       listSlug: (form.get("listSlug") as string).trim(),
+      anticipatedListUrl: (form.get("anticipatedListUrl") as string).trim(),
       tag: (form.get("tag") as string).trim(),
       city: (form.get("city") as string).trim(),
     });
@@ -78,8 +79,25 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-2">
+              <label htmlFor="anticipatedListUrl" className="text-sm font-medium">
+                Most Anticipated list
+              </label>
+              <input
+                id="anticipatedListUrl"
+                name="anticipatedListUrl"
+                type="text"
+                defaultValue={settings.anticipatedListUrl}
+                placeholder="e.g. https://boxd.it/abc123 or https://letterboxd.com/user/list/name/"
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+              <p className="text-xs text-muted-foreground">
+                Share link or URL to your anticipated movies list. Supports private lists via share links.
+              </p>
+            </div>
+
+            <div className="space-y-2">
               <label htmlFor="tag" className="text-sm font-medium">
-                Tag
+                Tag (optional fallback)
               </label>
               <input
                 id="tag"

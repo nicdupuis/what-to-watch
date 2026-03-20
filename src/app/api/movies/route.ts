@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { discoverAllMovies, searchMovie } from "@/lib/tmdb";
 import { parseRSS, scrapeList, scrapeTaggedFilms } from "@/lib/letterboxd";
-import { MovieSummary } from "@/types/movie";
+import { MovieSummary, TMDBMovie } from "@/types/movie";
 import { LetterboxdEntry, LetterboxdListEntry } from "@/types/letterboxd";
 
 function normalize(title: string): string {
@@ -12,8 +12,36 @@ function normalize(title: string): string {
     .replace(/[""]/g, '"');
 }
 
-// Minimum popularity for TMDB-only movies (not on the user's list).
 const MIN_POPULARITY = 5;
+
+async function enrichWithTMDB(
+  entries: LetterboxdListEntry[],
+  tmdbByTitle: Map<string, TMDBMovie>
+): Promise<{ entry: LetterboxdListEntry; tmdb: TMDBMovie | null }[]> {
+  const results: { entry: LetterboxdListEntry; tmdb: TMDBMovie | null }[] = [];
+  const searchPromises: Promise<void>[] = [];
+
+  for (const entry of entries) {
+    const tmdb = tmdbByTitle.get(normalize(entry.title)) ?? null;
+    results.push({ entry, tmdb });
+
+    if (!tmdb) {
+      const idx = results.length - 1;
+      searchPromises.push(
+        searchMovie(entry.title, entry.year || undefined)
+          .then((res) => {
+            if (res.results.length > 0) {
+              results[idx].tmdb = res.results[0];
+            }
+          })
+          .catch(() => {})
+      );
+    }
+  }
+
+  await Promise.allSettled(searchPromises);
+  return results;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,11 +60,22 @@ export async function GET(request: NextRequest) {
       10
     );
     const listSlug = searchParams.get("listSlug");
+    const anticipatedListUrl = searchParams.get("anticipatedListUrl");
     const tag = searchParams.get("tag");
+    const noCache = searchParams.get("noCache") === "true";
 
-    // 1. Fetch all data sources in parallel (each fails independently)
+    // 1. Fetch all data sources in parallel
+    const fetchOptions = noCache
+      ? { next: { revalidate: 0 } }
+      : undefined;
+
     const settled = await Promise.allSettled([
-      listSlug ? scrapeList(username, listSlug) : Promise.resolve([]),
+      listSlug
+        ? scrapeList(username, listSlug)
+        : Promise.resolve([]),
+      anticipatedListUrl
+        ? scrapeList(anticipatedListUrl)
+        : Promise.resolve([]),
       tag ? scrapeTaggedFilms(username, tag) : Promise.resolve([]),
       parseRSS(username).then((entries) =>
         entries.filter((e) => e.year === year)
@@ -44,16 +83,18 @@ export async function GET(request: NextRequest) {
       discoverAllMovies(year),
     ]);
 
-    const listEntries: LetterboxdListEntry[] =
+    const watchedListEntries: LetterboxdListEntry[] =
       settled[0].status === "fulfilled" ? settled[0].value : [];
-    const tagEntries: LetterboxdListEntry[] =
+    const anticipatedEntries: LetterboxdListEntry[] =
       settled[1].status === "fulfilled" ? settled[1].value : [];
-    const rssEntries: LetterboxdEntry[] =
+    const tagEntries: LetterboxdListEntry[] =
       settled[2].status === "fulfilled" ? settled[2].value : [];
-    const tmdbMovies =
+    const rssEntries: LetterboxdEntry[] =
       settled[3].status === "fulfilled" ? settled[3].value : [];
+    const tmdbMovies =
+      settled[4].status === "fulfilled" ? settled[4].value : [];
 
-    // 2. Build RSS lookup (has ratings + watched dates)
+    // 2. Build RSS lookup (has star ratings + watched dates)
     const rssMap = new Map<string, LetterboxdEntry>();
     for (const entry of rssEntries) {
       const key = normalize(entry.title);
@@ -66,13 +107,9 @@ export async function GET(request: NextRequest) {
     }
 
     // 3. Build TMDB lookup by normalized title
-    const tmdbByTitle = new Map<
-      string,
-      (typeof tmdbMovies)[number]
-    >();
+    const tmdbByTitle = new Map<string, TMDBMovie>();
     for (const m of tmdbMovies) {
       const key = normalize(m.title);
-      // Keep the more popular entry if titles collide
       if (
         !tmdbByTitle.has(key) ||
         m.popularity > (tmdbByTitle.get(key)!.popularity ?? 0)
@@ -81,95 +118,105 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 4. Start with the user's Letterboxd list as the primary source.
-    //    These are the movies the user explicitly tracks for the year.
+    // 4. Build anticipated set for cross-referencing
+    const anticipatedSlugs = new Set(
+      anticipatedEntries.map((e) => normalize(e.title))
+    );
+
+    // 5. Process watched list (tag entries merged in as fallback)
+    const allWatched = new Map<string, LetterboxdListEntry>();
+    for (const entry of tagEntries) {
+      allWatched.set(normalize(entry.title), entry);
+    }
+    for (const entry of watchedListEntries) {
+      allWatched.set(normalize(entry.title), entry);
+    }
+
     const results: MovieSummary[] = [];
     const seenTmdbIds = new Set<number>();
+    const seenTitles = new Set<string>();
 
-    // Merge list + tag entries (list takes priority for ranking)
-    const allLetterboxd = new Map<string, LetterboxdListEntry>();
-    // Tag entries first (lower priority)
-    for (const entry of tagEntries) {
-      allLetterboxd.set(normalize(entry.title), entry);
-    }
-    // List entries override (higher priority — they have rankings)
-    for (const entry of listEntries) {
-      allLetterboxd.set(normalize(entry.title), entry);
-    }
+    // Enrich watched list with TMDB
+    const enrichedWatched = await enrichWithTMDB(
+      [...allWatched.values()],
+      tmdbByTitle
+    );
 
-    // For each Letterboxd entry, find TMDB data to enrich it
-    const tmdbSearchPromises: Promise<void>[] = [];
-    const letterboxdEnriched: {
-      lbEntry: LetterboxdListEntry;
-      tmdb: (typeof tmdbMovies)[number] | null;
-    }[] = [];
-
-    for (const [normalizedTitle, lbEntry] of allLetterboxd) {
-      // Try local TMDB lookup first
-      const tmdb = tmdbByTitle.get(normalizedTitle) ?? null;
-      letterboxdEnriched.push({ lbEntry, tmdb });
-
-      // If no local match, queue a TMDB search
-      if (!tmdb) {
-        const idx = letterboxdEnriched.length - 1;
-        tmdbSearchPromises.push(
-          searchMovie(lbEntry.title, lbEntry.year)
-            .then((res) => {
-              if (res.results.length > 0) {
-                letterboxdEnriched[idx].tmdb = res.results[0];
-              }
-            })
-            .catch(() => {
-              // Search failed, leave tmdb as null
-            })
-        );
-      }
-    }
-
-    // Resolve any TMDB search lookups
-    await Promise.allSettled(tmdbSearchPromises);
-
-    // Build MovieSummary for each Letterboxd entry
-    for (const { lbEntry, tmdb } of letterboxdEnriched) {
-      const normalizedTitle = normalize(lbEntry.title);
+    for (const { entry, tmdb } of enrichedWatched) {
+      const normalizedTitle = normalize(entry.title);
       const rssEntry = rssMap.get(normalizedTitle);
 
-      // RSS tells us if the user watched it and their star rating
-      const watched = !!rssEntry;
-
-      const movie: MovieSummary = {
+      results.push({
         tmdbId: tmdb?.id ?? 0,
-        title: tmdb?.title ?? lbEntry.title,
+        title: tmdb?.title ?? entry.title,
         posterPath: tmdb?.poster_path ?? null,
         releaseDate: tmdb?.release_date ?? "",
         genreIds: tmdb?.genre_ids ?? [],
         overview: tmdb?.overview ?? "",
         voteAverage: tmdb?.vote_average ?? 0,
-        watched,
+        watched: !!rssEntry,
         userRating: rssEntry?.rating ?? null,
         watchedDate: rssEntry?.watchedDate ?? null,
-        listRanking: lbEntry.position,
-        ownerRating: lbEntry.ownerRating,
-        letterboxdSlug: lbEntry.filmSlug,
-        source: "list",
-      };
+        listRanking: entry.position,
+        ownerRating: entry.ownerRating,
+        letterboxdSlug: entry.filmSlug,
+        source: "watched-list",
+        anticipated: anticipatedSlugs.has(normalizedTitle),
+      });
 
       if (tmdb) seenTmdbIds.add(tmdb.id);
-      results.push(movie);
+      seenTitles.add(normalizedTitle);
     }
 
-    // 5. Add popular TMDB discover movies NOT already on the list.
-    //    These are upcoming releases the user hasn't added yet.
+    // 6. Process anticipated list (entries not already in watched list)
+    const newAnticipated = anticipatedEntries.filter(
+      (e) => !seenTitles.has(normalize(e.title))
+    );
+    const enrichedAnticipated = await enrichWithTMDB(
+      newAnticipated,
+      tmdbByTitle
+    );
+
+    for (const { entry, tmdb } of enrichedAnticipated) {
+      const normalizedTitle = normalize(entry.title);
+      const rssEntry = rssMap.get(normalizedTitle);
+
+      results.push({
+        tmdbId: tmdb?.id ?? 0,
+        title: tmdb?.title ?? entry.title,
+        posterPath: tmdb?.poster_path ?? null,
+        releaseDate: tmdb?.release_date ?? "",
+        genreIds: tmdb?.genre_ids ?? [],
+        overview: tmdb?.overview ?? "",
+        voteAverage: tmdb?.vote_average ?? 0,
+        watched: !!rssEntry,
+        userRating: rssEntry?.rating ?? null,
+        watchedDate: rssEntry?.watchedDate ?? null,
+        listRanking: null,
+        ownerRating: null,
+        letterboxdSlug: entry.filmSlug,
+        source: "anticipated",
+        anticipated: true,
+      });
+
+      if (tmdb) seenTmdbIds.add(tmdb.id);
+      seenTitles.add(normalizedTitle);
+    }
+
+    // 7. Add popular TMDB discover movies not on either list
     for (const movie of tmdbMovies) {
       if (seenTmdbIds.has(movie.id)) continue;
       if (movie.popularity < MIN_POPULARITY || !movie.poster_path) continue;
 
       const normalizedTitle = normalize(movie.title);
-      const rssEntry = rssMap.get(normalizedTitle);
+      if (seenTitles.has(normalizedTitle)) continue;
+
       const releaseYear = movie.release_date
         ? parseInt(movie.release_date.substring(0, 4), 10)
         : 0;
       if (releaseYear !== year) continue;
+
+      const rssEntry = rssMap.get(normalizedTitle);
 
       results.push({
         tmdbId: movie.id,
@@ -186,6 +233,7 @@ export async function GET(request: NextRequest) {
         ownerRating: null,
         letterboxdSlug: null,
         source: "discover",
+        anticipated: false,
       });
     }
 

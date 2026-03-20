@@ -12,7 +12,8 @@ export interface MovieSummary {
   listRanking: number | null; // position in the user's Letterboxd list
   ownerRating: number | null; // 1-10 rating from ranked Letterboxd list
   letterboxdSlug: string | null;
-  source: "list" | "discover"; // where this movie came from
+  source: "watched-list" | "anticipated" | "discover"; // where this movie came from
+  anticipated: boolean; // on the user's anticipated list
 }
 
 export interface MovieDetail extends MovieSummary {

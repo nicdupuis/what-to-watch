@@ -6,6 +6,7 @@ export interface UserSettings {
   letterboxdUsername: string;
   tmdbApiKey: string;
   listSlug: string;
+  anticipatedListUrl: string;
   tag: string;
   city: string;
 }
@@ -16,6 +17,7 @@ const defaultSettings: UserSettings = {
   letterboxdUsername: "",
   tmdbApiKey: "",
   listSlug: "top-2026",
+  anticipatedListUrl: "",
   tag: "top2026",
   city: "",
 };
