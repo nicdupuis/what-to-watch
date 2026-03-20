@@ -51,13 +51,12 @@ function countdownLabel(days: number): string {
 
 export default function CalendarPage() {
   const { movies, isLoading } = useMovies();
-  const [filter, setFilter] = useState<FilterMode>("all");
-  const [collapsedMonths, setCollapsedMonths] = useState<Set<string>>(
-    new Set()
-  );
-
   const today = new Date().toISOString().split("T")[0];
-  const currentMonthKey = today.substring(0, 7); // "2026-03"
+  const currentMonthKey = today.substring(0, 7);
+  const [filter, setFilter] = useState<FilterMode>("all");
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(
+    new Set([currentMonthKey])
+  );
 
   // Upcoming countdown: anticipated unreleased movies, nearest first
   const countdownMovies = useMemo(() => {
@@ -118,7 +117,7 @@ export default function CalendarPage() {
   }, [filteredMovies, currentMonthKey]);
 
   function toggleMonth(key: string) {
-    setCollapsedMonths((prev) => {
+    setExpandedMonths((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
@@ -237,7 +236,7 @@ export default function CalendarPage() {
       {/* Timeline */}
       <div className="space-y-2">
         {monthGroups.map((group) => {
-          const isCollapsed = collapsedMonths.has(group.key);
+          const isCollapsed = !expandedMonths.has(group.key);
           const anticipatedCount = group.movies.filter(
             (m) => m.anticipated || m.source === "anticipated"
           ).length;
