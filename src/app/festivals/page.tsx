@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn, formatDate } from "@/lib/utils";
 import type { Festival } from "@/types/festival";
-import { ExternalLink, MapPin, Calendar } from "lucide-react";
+import { ExternalLink, MapPin, Calendar, Trophy } from "lucide-react";
 
 function getFestivalStatus(
   festival: Festival,
@@ -183,6 +183,24 @@ export default function FestivalsPage() {
                     {formatDate(festival.startDate)} &ndash;{" "}
                     {formatDate(festival.endDate)}
                   </span>
+                </div>
+                {/* Top Prizes */}
+                <div className="space-y-1.5 pt-1">
+                  {festival.topPrizes && festival.topPrizes.length > 0 ? (
+                    festival.topPrizes.map((prize, idx) => (
+                      <div key={idx} className="flex items-start gap-2 text-sm">
+                        {idx === 0 && <Trophy className="h-3.5 w-3.5 flex-shrink-0 mt-0.5 text-yellow-500" />}
+                        {idx !== 0 && <span className="w-3.5 flex-shrink-0" />}
+                        <span>
+                          <span className="font-semibold">{prize.prizeName}:</span>{" "}
+                          {prize.filmTitle}{" "}
+                          <span className="text-muted-foreground">({prize.director})</span>
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">Winners TBA</p>
+                  )}
                 </div>
                 <a
                   href={festival.url}

@@ -3,9 +3,9 @@ import { Card, CardContent } from "@/components/ui/card";
 
 function MovieCardSkeleton() {
   return (
-    <Card className="overflow-hidden">
+    <Card className="h-[420px] overflow-hidden">
       {/* Poster placeholder */}
-      <Skeleton className="aspect-[2/3] w-full rounded-b-none" />
+      <Skeleton className="h-[310px] w-full rounded-b-none" />
       <CardContent className="p-3">
         {/* Title */}
         <Skeleton className="mb-2 h-4 w-3/4" />

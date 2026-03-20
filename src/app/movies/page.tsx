@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { Suspense, useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useMovies } from "@/hooks/use-movies";
 import { MovieGrid } from "@/components/movie/movie-grid";
 import {
@@ -56,13 +57,13 @@ function filterMovies(
   switch (filters.sortBy) {
     case "list_ranking":
       result.sort((a, b) => {
-        // Watched list first (by ranking), then anticipated, then discover
+        // Watched list first (by owner rating desc), then anticipated, then discover
         const sourceOrder = { "watched-list": 0, anticipated: 1, discover: 2 };
         const aSrc = sourceOrder[a.source] ?? 2;
         const bSrc = sourceOrder[b.source] ?? 2;
         if (aSrc !== bSrc) return aSrc - bSrc;
         if (a.source === "watched-list" && b.source === "watched-list") {
-          return (a.listRanking ?? 999) - (b.listRanking ?? 999);
+          return (b.ownerRating ?? 0) - (a.ownerRating ?? 0);
         }
         return 0;
       });
@@ -85,9 +86,31 @@ function filterMovies(
 }
 
 export default function MoviesPage() {
+  return (
+    <Suspense>
+      <MoviesContent />
+    </Suspense>
+  );
+}
+
+function MoviesContent() {
   const { movies, isLoading, mutate } = useMovies();
-  const [filters, setFilters] = useState<MovieFilters>(defaultFilters);
+  const searchParams = useSearchParams();
+  const [filters, setFilters] = useState<MovieFilters>(() => {
+    const source = searchParams.get("source");
+    if (source === "watched-list" || source === "anticipated") {
+      return { ...defaultFilters, sourceFilter: source };
+    }
+    return defaultFilters;
+  });
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    const source = searchParams.get("source");
+    if (source === "watched-list" || source === "anticipated") {
+      setFilters((prev) => ({ ...prev, sourceFilter: source }));
+    }
+  }, [searchParams]);
 
   const filteredMovies = useMemo(
     () => filterMovies(movies, filters),

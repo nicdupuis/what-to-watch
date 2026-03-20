@@ -7,9 +7,9 @@ import { cn } from "@/lib/utils";
 import { tmdbImageUrl } from "@/lib/utils";
 
 const sizeMap = {
-  sm: { width: 92, height: 138, tmdb: "w92" },
-  md: { width: 185, height: 278, tmdb: "w185" },
-  lg: { width: 342, height: 513, tmdb: "w342" },
+  sm: { width: 154, height: 231, tmdb: "w342" },
+  md: { width: 342, height: 513, tmdb: "w500" },
+  lg: { width: 500, height: 750, tmdb: "w780" },
 } as const;
 
 export interface PosterImageProps {

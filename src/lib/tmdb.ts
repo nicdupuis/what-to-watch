@@ -55,6 +55,24 @@ export async function getMovie(id: number): Promise<TMDBMovieDetail> {
   return res.json();
 }
 
+export async function getMovieCredits(
+  id: number
+): Promise<{ directors: string[]; topCast: string[] }> {
+  const res = await tmdbFetch(`/movie/${id}/credits`, 86400);
+  if (!res.ok) {
+    return { directors: [], topCast: [] };
+  }
+  const data = await res.json();
+  const directors = (data.crew ?? [])
+    .filter((c: { job: string; name: string }) => c.job === "Director")
+    .map((c: { name: string }) => c.name);
+  const topCast = (data.cast ?? [])
+    .sort((a: { order: number }, b: { order: number }) => a.order - b.order)
+    .slice(0, 3)
+    .map((c: { name: string }) => c.name);
+  return { directors, topCast };
+}
+
 export async function getUpcoming(): Promise<TMDBDiscoverResponse> {
   const res = await tmdbFetch(`/movie/upcoming?region=CA`, 3600);
   if (!res.ok) throw new Error(`TMDB upcoming failed: ${res.status}`);

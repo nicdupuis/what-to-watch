@@ -14,11 +14,12 @@ export interface MovieSummary {
   letterboxdSlug: string | null;
   source: "watched-list" | "anticipated" | "discover"; // where this movie came from
   anticipated: boolean; // on the user's anticipated list
+  directors: string[];
+  topCast: string[]; // up to 3 main actors
 }
 
 export interface MovieDetail extends MovieSummary {
   runtime: number | null;
-  directors: string[];
   cast: string[];
   streamingProviders: StreamingProvider[];
   backdropPath: string | null;

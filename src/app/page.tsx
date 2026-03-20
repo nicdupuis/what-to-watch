@@ -16,7 +16,6 @@ import {
   BarChart3,
   Star,
   Calendar,
-  CheckCircle,
   Settings,
   ArrowRight,
   Sparkles,
@@ -131,35 +130,39 @@ export default function HomePage() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Watched
-              </CardTitle>
-              <Eye className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{watchedCount}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                ranked on your list
-              </p>
-            </CardContent>
-          </Card>
+          <Link href="/movies?source=watched-list">
+            <Card className="transition-all hover:shadow-md hover:scale-[1.02] cursor-pointer">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Watched
+                </CardTitle>
+                <Eye className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{watchedCount}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  ranked on your list
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Anticipated
-              </CardTitle>
-              <Sparkles className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{anticipatedCount}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                +{discoverMovies.length} to discover
-              </p>
-            </CardContent>
-          </Card>
+          <Link href="/movies?source=anticipated">
+            <Card className="transition-all hover:shadow-md hover:scale-[1.02] cursor-pointer">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Anticipated
+                </CardTitle>
+                <Sparkles className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{anticipatedCount}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  +{discoverMovies.length} to discover
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -243,7 +246,7 @@ export default function HomePage() {
         <section>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-lg font-semibold">Recently Watched</h2>
-            <Link href="/watched">
+            <Link href="/movies?source=watched-list">
               <Button variant="ghost" size="sm">
                 View All <ArrowRight className="ml-1 h-4 w-4" />
               </Button>
@@ -296,12 +299,6 @@ export default function HomePage() {
             <Button variant="outline" className="h-auto w-full flex-col gap-2 py-4">
               <Calendar className="h-5 w-5" />
               <span>Calendar</span>
-            </Button>
-          </Link>
-          <Link href="/watched">
-            <Button variant="outline" className="h-auto w-full flex-col gap-2 py-4">
-              <CheckCircle className="h-5 w-5" />
-              <span>Watched</span>
             </Button>
           </Link>
           <Link href="/festivals">

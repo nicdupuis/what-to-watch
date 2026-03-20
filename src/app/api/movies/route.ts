@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { discoverAllMovies, searchMovie } from "@/lib/tmdb";
+import { discoverAllMovies, getMovieCredits, searchMovie } from "@/lib/tmdb";
 import { parseRSS, scrapeList, scrapeTaggedFilms } from "@/lib/letterboxd";
 import { MovieSummary, TMDBMovie } from "@/types/movie";
 import { LetterboxdEntry, LetterboxdListEntry } from "@/types/letterboxd";
@@ -162,6 +162,8 @@ export async function GET(request: NextRequest) {
         letterboxdSlug: entry.filmSlug,
         source: "watched-list",
         anticipated: anticipatedSlugs.has(normalizedTitle),
+        directors: [],
+        topCast: [],
       });
 
       if (tmdb) seenTmdbIds.add(tmdb.id);
@@ -197,6 +199,8 @@ export async function GET(request: NextRequest) {
         letterboxdSlug: entry.filmSlug,
         source: "anticipated",
         anticipated: true,
+        directors: [],
+        topCast: [],
       });
 
       if (tmdb) seenTmdbIds.add(tmdb.id);
@@ -234,7 +238,23 @@ export async function GET(request: NextRequest) {
         letterboxdSlug: null,
         source: "discover",
         anticipated: false,
+        directors: [],
+        topCast: [],
       });
+    }
+
+    // 8. Batch-fetch credits for all movies with a valid tmdbId
+    const moviesToFetch = results.filter((m) => m.tmdbId > 0);
+    const BATCH_SIZE = 20;
+    for (let i = 0; i < moviesToFetch.length; i += BATCH_SIZE) {
+      const batch = moviesToFetch.slice(i, i + BATCH_SIZE);
+      const creditResults = await Promise.all(
+        batch.map((m) => getMovieCredits(m.tmdbId))
+      );
+      for (let j = 0; j < batch.length; j++) {
+        batch[j].directors = creditResults[j].directors;
+        batch[j].topCast = creditResults[j].topCast;
+      }
     }
 
     return NextResponse.json(results);
