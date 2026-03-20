@@ -8,6 +8,7 @@ export interface MovieSummary {
   overview: string;
   voteAverage: number;
   popularity: number;
+  voteCount: number;
   watched: boolean;
   userRating: number | null;
   watchedDate: string | null;
