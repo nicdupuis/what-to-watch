@@ -68,6 +68,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const today = new Date().toISOString().split("T")[0];
     const year = parseInt(
       searchParams.get("year") || String(new Date().getFullYear()),
       10
@@ -233,7 +234,11 @@ export async function GET(request: NextRequest) {
     // 7. Add popular TMDB discover movies not on either list
     for (const movie of tmdbMovies) {
       if (seenTmdbIds.has(movie.id)) continue;
-      if (!movie.poster_path || movie.popularity < MIN_POPULARITY) continue;
+      if (!movie.poster_path) continue;
+      // Apply popularity filter only to released movies — unreleased films
+      // have artificially low popularity and would all get filtered out
+      const isReleased = movie.release_date && movie.release_date <= today;
+      if (isReleased && movie.popularity < MIN_POPULARITY) continue;
 
       const normalizedTitle = normalize(movie.title);
       if (seenTitles.has(normalizedTitle)) continue;
