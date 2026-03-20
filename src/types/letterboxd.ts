@@ -15,4 +15,5 @@ export interface LetterboxdListEntry {
   filmSlug: string;
   position: number;
   ownerRating: number | null; // 1-10 scale from ranked lists
+  tmdbId: number | null; // resolved from Letterboxd film page
 }

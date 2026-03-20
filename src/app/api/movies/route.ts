@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { discoverAllMovies, getMovieCredits, searchMovie } from "@/lib/tmdb";
+import { discoverAllMovies, getMovieBasic, getMovieCredits } from "@/lib/tmdb";
 import { parseRSS, scrapeList, scrapeTaggedFilms } from "@/lib/letterboxd";
 import { MovieSummary, TMDBMovie } from "@/types/movie";
 import { LetterboxdEntry, LetterboxdListEntry } from "@/types/letterboxd";
@@ -15,85 +15,44 @@ function normalize(title: string): string {
 const MIN_POPULARITY = 5;
 
 /**
- * Picks the best TMDB match from search results.
- * Prefers: exact year match > future release > most popular.
+ * Enriches Letterboxd entries with TMDB data.
+ * Uses the TMDB ID resolved from Letterboxd film pages (most reliable),
+ * falls back to title lookup in the discover cache, then TMDB search.
  */
-function pickBestMatch(
-  results: TMDBMovie[],
-  targetYear: number
-): TMDBMovie | null {
-  if (results.length === 0) return null;
-  if (results.length === 1) return results[0];
-
-  // If we have a target year, prefer exact match
-  if (targetYear > 0) {
-    const yearMatch = results.find((m) => {
-      const y = m.release_date ? parseInt(m.release_date.substring(0, 4), 10) : 0;
-      return y === targetYear;
-    });
-    if (yearMatch) return yearMatch;
-  }
-
-  // Prefer recent/upcoming releases (2025+)
-  const recent = results.filter((m) => {
-    const y = m.release_date ? parseInt(m.release_date.substring(0, 4), 10) : 0;
-    return y >= 2025;
-  });
-  if (recent.length > 0) {
-    return recent.sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))[0];
-  }
-
-  // Fall back to most popular
-  return results.sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))[0];
-}
-
 async function enrichWithTMDB(
   entries: LetterboxdListEntry[],
   tmdbByTitle: Map<string, TMDBMovie>,
-  trackingYear: number
+  tmdbById: Map<number, TMDBMovie>
 ): Promise<{ entry: LetterboxdListEntry; tmdb: TMDBMovie | null }[]> {
   const results: { entry: LetterboxdListEntry; tmdb: TMDBMovie | null }[] = [];
-  const searchPromises: Promise<void>[] = [];
+  const fetchPromises: Promise<void>[] = [];
 
   for (const entry of entries) {
-    const tmdb = tmdbByTitle.get(normalize(entry.title)) ?? null;
+    // 1. Try direct TMDB ID lookup (resolved from Letterboxd film page)
+    let tmdb: TMDBMovie | null = null;
+    if (entry.tmdbId) {
+      tmdb = tmdbById.get(entry.tmdbId) ?? null;
+    }
+
+    // 2. Try title match in discover cache
+    if (!tmdb) {
+      tmdb = tmdbByTitle.get(normalize(entry.title)) ?? null;
+    }
+
     results.push({ entry, tmdb });
 
-    if (!tmdb) {
+    // 3. If still no match but we have a TMDB ID, fetch directly
+    if (!tmdb && entry.tmdbId) {
       const idx = results.length - 1;
-      searchPromises.push(
-        (async () => {
-          try {
-            // If we have a year from Letterboxd, search with it
-            const year = entry.year || trackingYear;
-            const res = await searchMovie(entry.title, year);
-            let match = pickBestMatch(res.results, year);
-
-            // If no results with year, retry without year constraint
-            if (!match && entry.year) {
-              const fallback = await searchMovie(entry.title);
-              match = pickBestMatch(fallback.results, entry.year);
-            }
-
-            // If year was 0 and we searched with trackingYear but got nothing,
-            // try without any year
-            if (!match && !entry.year) {
-              const fallback = await searchMovie(entry.title);
-              match = pickBestMatch(fallback.results, trackingYear);
-            }
-
-            if (match) {
-              results[idx].tmdb = match;
-            }
-          } catch {
-            // Search failed, leave tmdb as null
-          }
-        })()
+      fetchPromises.push(
+        getMovieBasic(entry.tmdbId).then((movie) => {
+          if (movie) results[idx].tmdb = movie;
+        })
       );
     }
   }
 
-  await Promise.allSettled(searchPromises);
+  await Promise.allSettled(fetchPromises);
   return results;
 }
 
@@ -160,8 +119,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 3. Build TMDB lookup by normalized title
+    // 3. Build TMDB lookups (by title and by ID)
     const tmdbByTitle = new Map<string, TMDBMovie>();
+    const tmdbById = new Map<number, TMDBMovie>();
     for (const m of tmdbMovies) {
       const key = normalize(m.title);
       if (
@@ -170,6 +130,7 @@ export async function GET(request: NextRequest) {
       ) {
         tmdbByTitle.set(key, m);
       }
+      tmdbById.set(m.id, m);
     }
 
     // 4. Build anticipated set for cross-referencing
@@ -194,7 +155,7 @@ export async function GET(request: NextRequest) {
     const enrichedWatched = await enrichWithTMDB(
       [...allWatched.values()],
       tmdbByTitle,
-      year
+      tmdbById
     );
 
     for (const { entry, tmdb } of enrichedWatched) {
@@ -233,7 +194,7 @@ export async function GET(request: NextRequest) {
     const enrichedAnticipated = await enrichWithTMDB(
       newAnticipated,
       tmdbByTitle,
-      year
+      tmdbById
     );
 
     for (const { entry, tmdb } of enrichedAnticipated) {

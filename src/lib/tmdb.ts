@@ -1,4 +1,4 @@
-import { TMDBDiscoverResponse, TMDBMovieDetail } from "@/types/movie";
+import { TMDBDiscoverResponse, TMDBMovie, TMDBMovieDetail } from "@/types/movie";
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
 const BASE_URL = "https://api.themoviedb.org/3";
@@ -44,6 +44,27 @@ export async function discoverAllMovies(
   }
 
   return allMovies;
+}
+
+export async function getMovieBasic(id: number): Promise<TMDBMovie | null> {
+  try {
+    const res = await tmdbFetch(`/movie/${id}`, 86400);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return {
+      id: data.id,
+      title: data.title,
+      poster_path: data.poster_path,
+      release_date: data.release_date,
+      genre_ids: (data.genres ?? []).map((g: { id: number }) => g.id),
+      overview: data.overview,
+      vote_average: data.vote_average,
+      backdrop_path: data.backdrop_path,
+      popularity: data.popularity,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function getMovie(id: number): Promise<TMDBMovieDetail> {

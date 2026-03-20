@@ -125,10 +125,47 @@ function parsePosterItems(
       filmSlug,
       position: startPosition + entries.length + 1,
       ownerRating,
+      tmdbId: null,
     });
   });
 
   return entries;
+}
+
+/**
+ * Resolves TMDB IDs for a batch of Letterboxd entries by fetching
+ * each film's Letterboxd page and extracting `data-tmdb-id`.
+ * This is the only reliable way to get the correct TMDB mapping.
+ */
+async function resolveTmdbIds(
+  entries: LetterboxdListEntry[]
+): Promise<void> {
+  const BATCH_SIZE = 10;
+
+  for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+    const batch = entries.slice(i, i + BATCH_SIZE);
+    await Promise.allSettled(
+      batch.map(async (entry) => {
+        try {
+          const res = await fetch(
+            `https://letterboxd.com/film/${entry.filmSlug}/`,
+            {
+              next: { revalidate: 86400 },
+              headers: { "User-Agent": "OscarTracker/1.0" },
+            }
+          );
+          if (!res.ok) return;
+          const html = await res.text();
+          const match = html.match(/data-tmdb-id="(\d+)"/);
+          if (match) {
+            entry.tmdbId = parseInt(match[1], 10);
+          }
+        } catch {
+          // Leave tmdbId as null
+        }
+      })
+    );
+  }
 }
 
 /**
@@ -193,6 +230,9 @@ export async function scrapeList(
     page++;
   }
 
+  // Resolve TMDB IDs from Letterboxd film pages
+  await resolveTmdbIds(entries);
+
   return entries;
 }
 
@@ -239,6 +279,8 @@ export async function scrapeTaggedFilms(
     hasMore = nextPage.length > 0;
     page++;
   }
+
+  await resolveTmdbIds(entries);
 
   return entries;
 }
