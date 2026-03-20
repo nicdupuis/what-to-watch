@@ -79,7 +79,11 @@ export default function CalendarPage() {
       result = result.filter((m) => m.anticipated || m.source === "anticipated");
     } else if (filter === "popular") {
       result = result.filter(
-        (m) => m.source === "watched-list" || m.source === "anticipated" || m.voteAverage >= 7
+        (m) =>
+          m.source === "watched-list" ||
+          m.source === "anticipated" ||
+          m.popularity >= 20 ||
+          m.voteAverage >= 7
       );
     }
     return result;

@@ -7,6 +7,7 @@ export interface MovieSummary {
   genreIds: number[];
   overview: string;
   voteAverage: number;
+  popularity: number;
   watched: boolean;
   userRating: number | null;
   watchedDate: string | null;
