@@ -109,18 +109,16 @@ export async function GET(request: NextRequest) {
         })
     );
 
-    // 6. Filter to 2025-2026 releases only
+    // 6. Build recommendations — no year filter, but require decent rating
     const filtered: Recommendation[] = [];
     for (const [, { movie, basedOn }] of recMap) {
-      if (!movie.release_date) continue;
-      const releaseYear = parseInt(movie.release_date.substring(0, 4), 10);
-      if (releaseYear < 2025 || releaseYear > 2026) continue;
+      if (movie.vote_average < 5 && movie.vote_count > 0) continue;
 
       filtered.push({
         tmdbId: movie.id,
         title: movie.title,
         posterPath: movie.poster_path,
-        releaseDate: movie.release_date,
+        releaseDate: movie.release_date ?? "",
         overview: movie.overview,
         voteAverage: movie.vote_average,
         genres: movie.genre_ids ?? [],
@@ -129,7 +127,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 7. Sort by score (descending), then by vote average
+    // 7. Sort by score first, then by rating
     filtered.sort((a, b) => b.score - a.score || b.voteAverage - a.voteAverage);
 
     return NextResponse.json(filtered.slice(0, limit));
