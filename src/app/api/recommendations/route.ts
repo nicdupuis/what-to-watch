@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 1. Scrape the user's full watch history (no TMDB resolution — too slow)
+    // 1. Scrape the user's full watch history (for exclusion list)
     const allWatched = await scrapeAllWatchedFilms(username);
 
     if (allWatched.length === 0) {
@@ -70,49 +70,82 @@ export async function GET(request: NextRequest) {
       allWatched.map((entry) => normalize(entry.title))
     );
 
-    // 3. Pick the 8 most recently watched films (first entries = most recent on Letterboxd)
-    const recentFilms = allWatched.slice(0, 8);
+    // 3. Get the user's RSS diary to find highly-rated films (RSS has ratings)
+    const { parseRSS } = await import("@/lib/letterboxd");
+    const rssEntries = await parseRSS(username);
 
-    // 4. Resolve TMDB IDs for the recent films by fetching their Letterboxd pages
-    const resolvedFilms = await Promise.all(
-      recentFilms.map(async (entry) => {
-        const tmdbId = await resolveSingleTmdbId(entry.filmSlug);
-        return { ...entry, tmdbId };
+    // Pick films the user rated 4.5+ (near 5 stars) — these represent true favorites
+    const topRated = rssEntries
+      .filter((e) => e.rating !== null && e.rating >= 4.5)
+      .slice(0, 10);
+
+    // If not enough highly-rated films, fall back to any rated film
+    const seedFilms = topRated.length >= 3
+      ? topRated
+      : rssEntries.filter((e) => e.rating !== null && e.rating >= 3.5).slice(0, 8);
+
+    // 4. Resolve TMDB IDs for seed films via search (RSS entries don't have slugs)
+    const resolvedSeeds = await Promise.all(
+      seedFilms.map(async (entry) => {
+        try {
+          const { searchMovie } = await import("@/lib/tmdb");
+          const res = await searchMovie(entry.title, entry.year || undefined);
+          const tmdbId = res.results[0]?.id ?? null;
+          return { title: entry.title, rating: entry.rating, tmdbId };
+        } catch {
+          return { title: entry.title, rating: entry.rating, tmdbId: null };
+        }
       })
     );
 
-    // 5. For each resolved TMDB ID, get recommendations
+    // 5. For each seed film, get TMDB recommendations
     const recMap = new Map<
       number,
-      { movie: TMDBMovie; basedOn: Set<string> }
+      { movie: TMDBMovie; basedOn: Set<string>; seedRatings: number[] }
     >();
 
     await Promise.all(
-      resolvedFilms
+      resolvedSeeds
         .filter((f) => f.tmdbId !== null)
-        .map(async (film) => {
-          const recs = await getRecommendations(film.tmdbId!);
+        .map(async (seed) => {
+          const recs = await getRecommendations(seed.tmdbId!);
           for (const rec of recs) {
-            // Skip movies the user has already watched
             if (watchedTitles.has(normalize(rec.title))) continue;
 
             const existing = recMap.get(rec.id);
             if (existing) {
-              existing.basedOn.add(film.title);
+              existing.basedOn.add(seed.title);
+              existing.seedRatings.push(seed.rating ?? 4);
             } else {
               recMap.set(rec.id, {
                 movie: rec,
-                basedOn: new Set([film.title]),
+                basedOn: new Set([seed.title]),
+                seedRatings: [seed.rating ?? 4],
               });
             }
           }
         })
     );
 
-    // 6. Build recommendations — no year filter, but require decent rating
+    // 6. Build recommendations with scoring
+    const currentYear = new Date().getFullYear();
     const filtered: Recommendation[] = [];
-    for (const [, { movie, basedOn }] of recMap) {
+    for (const [, { movie, basedOn, seedRatings }] of recMap) {
       if (movie.vote_average < 5 && movie.vote_count > 0) continue;
+
+      // Score: base from how many seed films recommended this
+      let score = basedOn.size;
+
+      // Boost from seed ratings (higher-rated seeds = stronger signal)
+      const avgSeedRating = seedRatings.reduce((a, b) => a + b, 0) / seedRatings.length;
+      score += (avgSeedRating - 4) * 0.5; // 5-star seed adds +0.5, 4.5-star adds +0.25
+
+      // Mild recency boost: recent movies get a small nudge, not a dominating factor
+      const releaseYear = movie.release_date
+        ? parseInt(movie.release_date.substring(0, 4), 10)
+        : 0;
+      if (releaseYear >= currentYear - 1) score += 0.3;
+      if (releaseYear >= currentYear) score += 0.2;
 
       filtered.push({
         tmdbId: movie.id,
@@ -122,12 +155,12 @@ export async function GET(request: NextRequest) {
         overview: movie.overview,
         voteAverage: movie.vote_average,
         genres: movie.genre_ids ?? [],
-        score: basedOn.size,
+        score: Math.round(score * 10) / 10,
         basedOn: [...basedOn],
       });
     }
 
-    // 7. Sort by score first, then by rating
+    // 7. Sort by score first, then by TMDB rating
     filtered.sort((a, b) => b.score - a.score || b.voteAverage - a.voteAverage);
 
     return NextResponse.json(filtered.slice(0, limit));
