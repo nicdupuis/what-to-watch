@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Film, Moon, Sun, Menu, X, Settings } from "lucide-react";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/layout/theme-provider";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
