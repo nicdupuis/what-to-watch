@@ -74,15 +74,15 @@ export async function GET(request: NextRequest) {
     const { parseRSS } = await import("@/lib/letterboxd");
     const rssEntries = await parseRSS(username);
 
-    // Pick films the user rated 4.5+ (near 5 stars) — these represent true favorites
+    // Pick only 5-star films — the user's absolute favorites
     const topRated = rssEntries
-      .filter((e) => e.rating !== null && e.rating >= 4.5)
+      .filter((e) => e.rating !== null && e.rating >= 5)
       .slice(0, 10);
 
-    // If not enough highly-rated films, fall back to any rated film
-    const seedFilms = topRated.length >= 3
+    // If not enough 5-star films, fall back to 4.5+
+    const seedFilms = topRated.length >= 2
       ? topRated
-      : rssEntries.filter((e) => e.rating !== null && e.rating >= 3.5).slice(0, 8);
+      : rssEntries.filter((e) => e.rating !== null && e.rating >= 4.5).slice(0, 8);
 
     // 4. Resolve TMDB IDs for seed films via search (RSS entries don't have slugs)
     const resolvedSeeds = await Promise.all(
@@ -128,7 +128,6 @@ export async function GET(request: NextRequest) {
     );
 
     // 6. Build recommendations with scoring
-    const currentYear = new Date().getFullYear();
     const filtered: Recommendation[] = [];
     for (const [, { movie, basedOn, seedRatings }] of recMap) {
       if (movie.vote_average < 5 && movie.vote_count > 0) continue;
@@ -136,16 +135,7 @@ export async function GET(request: NextRequest) {
       // Score: base from how many seed films recommended this
       let score = basedOn.size;
 
-      // Boost from seed ratings (higher-rated seeds = stronger signal)
-      const avgSeedRating = seedRatings.reduce((a, b) => a + b, 0) / seedRatings.length;
-      score += (avgSeedRating - 4) * 0.5; // 5-star seed adds +0.5, 4.5-star adds +0.25
-
-      // Mild recency boost: recent movies get a small nudge, not a dominating factor
-      const releaseYear = movie.release_date
-        ? parseInt(movie.release_date.substring(0, 4), 10)
-        : 0;
-      if (releaseYear >= currentYear - 1) score += 0.3;
-      if (releaseYear >= currentYear) score += 0.2;
+      // No recency boost — let quality and match count speak for themselves
 
       filtered.push({
         tmdbId: movie.id,
