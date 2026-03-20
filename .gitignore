@@ -33,7 +33,7 @@ yarn-error.log*
 .env.local
 .env*.local
 
-# corporate registry config (not needed outside Autodesk network)
+# registry config
 .npmrc
 
 # vercel
