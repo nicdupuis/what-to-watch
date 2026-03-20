@@ -190,3 +190,13 @@ export async function getTopRatedTV(): Promise<TMDBTVShow[]> {
   const data = await res.json();
   return data.results;
 }
+
+export async function discoverTV(): Promise<TMDBTVShow[]> {
+  const res = await tmdbFetch(
+    `/discover/tv?sort_by=popularity.desc&first_air_date.gte=2025-01-01&vote_count.gte=10`,
+    3600
+  );
+  if (!res.ok) throw new Error(`TMDB discover TV failed: ${res.status}`);
+  const data = await res.json();
+  return data.results;
+}
