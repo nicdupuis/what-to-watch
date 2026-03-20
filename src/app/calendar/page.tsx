@@ -78,7 +78,9 @@ export default function CalendarPage() {
     if (filter === "anticipated") {
       result = result.filter((m) => m.anticipated || m.source === "anticipated");
     } else if (filter === "popular") {
-      result = result.filter((m) => m.voteAverage >= 6 || m.anticipated || m.source !== "discover");
+      result = result.filter(
+        (m) => m.source === "watched-list" || m.source === "anticipated" || m.voteAverage >= 7
+      );
     }
     return result;
   }, [movies, filter]);
