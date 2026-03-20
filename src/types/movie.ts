@@ -2,6 +2,7 @@ export interface MovieSummary {
   tmdbId: number;
   title: string;
   posterPath: string | null;
+  backdropPath: string | null; // fallback image when no poster
   releaseDate: string;
   genreIds: number[];
   overview: string;

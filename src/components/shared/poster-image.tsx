@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Film } from "lucide-react";
+import { Film, AlertCircle } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { tmdbImageUrl } from "@/lib/utils";
@@ -14,6 +14,7 @@ const sizeMap = {
 
 export interface PosterImageProps {
   posterPath: string | null;
+  backdropPath?: string | null;
   alt: string;
   size?: "sm" | "md" | "lg";
   className?: string;
@@ -21,22 +22,49 @@ export interface PosterImageProps {
 
 function PosterImage({
   posterPath,
+  backdropPath,
   alt,
   size = "md",
   className,
 }: PosterImageProps) {
   const { width, height, tmdb } = sizeMap[size];
 
+  // No poster but we have a backdrop — use it as fallback
+  if (!posterPath && backdropPath) {
+    return (
+      <div className={cn("relative", className)} style={{ width, height }}>
+        <Image
+          src={tmdbImageUrl(backdropPath, "w780")}
+          alt={alt}
+          width={width}
+          height={height}
+          className="h-full w-full rounded-md object-cover"
+        />
+        {/* Unofficial image indicator */}
+        <div className="group/tip absolute top-1.5 right-1.5">
+          <AlertCircle className="h-4 w-4 text-amber-400 drop-shadow" />
+          <div className="absolute right-0 top-6 hidden whitespace-nowrap rounded bg-popover px-2 py-1 text-[10px] text-popover-foreground shadow-md group-hover/tip:block">
+            Not an official poster
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // No image at all
   if (!posterPath) {
     return (
       <div
         className={cn(
-          "flex items-center justify-center rounded-md bg-muted",
+          "flex flex-col items-center justify-center gap-2 rounded-md bg-muted",
           className,
         )}
         style={{ width, height }}
       >
         <Film className="h-8 w-8 text-muted-foreground" />
+        <span className="px-3 text-center text-xs font-medium text-muted-foreground leading-tight">
+          {alt}
+        </span>
       </div>
     );
   }

@@ -19,7 +19,7 @@ export interface MovieCardProps {
 function MovieCard({ movie }: MovieCardProps) {
   const [flipped, setFlipped] = useState(false);
 
-  const genres = movie.genreIds
+  const genres = (movie.genreIds ?? [])
     .map((id) => GENRE_MAP[id])
     .filter(Boolean)
     .slice(0, 2);
@@ -40,9 +40,10 @@ function MovieCard({ movie }: MovieCardProps) {
           <div className="relative">
             <PosterImage
               posterPath={movie.posterPath}
+              backdropPath={movie.backdropPath}
               alt={movie.title}
               size="md"
-              className="w-full h-[310px] object-cover rounded-b-none"
+              className="w-full h-[300px] object-cover rounded-b-none"
             />
             {movie.watched && <WatchedBadge rating={movie.userRating} />}
             {movie.source === "watched-list" && movie.ownerRating !== null && (
@@ -58,6 +59,11 @@ function MovieCard({ movie }: MovieCardProps) {
           </div>
           <div className="p-3">
             <h3 className="truncate text-sm font-semibold">{movie.title}</h3>
+            {movie.directors.length > 0 && (
+              <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                {movie.directors.join(", ")}
+              </p>
+            )}
             {movie.releaseDate && (
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {formatDate(movie.releaseDate)}
