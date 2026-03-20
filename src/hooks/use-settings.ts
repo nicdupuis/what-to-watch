@@ -11,7 +11,7 @@ export interface UserSettings {
   city: string;
 }
 
-const STORAGE_KEY = "oscar-tracker-settings";
+const STORAGE_KEY = "what-to-watch-settings";
 
 const defaultSettings: UserSettings = {
   letterboxdUsername: "",

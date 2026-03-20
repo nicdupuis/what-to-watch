@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Oscar Tracker 2026",
+  title: "What To Watch",
   description: "Track 2026 movie releases for Oscar season preparation",
 };
 

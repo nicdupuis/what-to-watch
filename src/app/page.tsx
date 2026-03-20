@@ -37,7 +37,7 @@ export default function HomePage() {
             <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
               <Settings className="h-6 w-6 text-primary" />
             </div>
-            <CardTitle className="text-xl">Welcome to Oscar Tracker</CardTitle>
+            <CardTitle className="text-xl">Welcome to What To Watch</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">

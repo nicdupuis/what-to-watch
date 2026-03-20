@@ -31,7 +31,7 @@ export default function SettingsPage() {
       <div>
         <h1 className="text-3xl font-bold">Settings</h1>
         <p className="text-muted-foreground mt-1">
-          Configure your Oscar Tracker preferences
+          Configure your What To Watch preferences
         </p>
       </div>
 

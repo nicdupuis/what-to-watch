@@ -29,9 +29,9 @@ export function SiteHeader() {
         <Link href="/" className="flex items-center gap-2 mr-8">
           <Film className="h-6 w-6 text-primary" />
           <span className="font-bold text-lg hidden sm:inline">
-            Oscar Tracker 2026
+            What To Watch
           </span>
-          <span className="font-bold text-lg sm:hidden">OT26</span>
+          <span className="font-bold text-lg sm:hidden">WTW</span>
         </Link>
 
         {/* Desktop nav */}
