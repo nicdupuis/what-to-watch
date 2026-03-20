@@ -114,7 +114,7 @@ function parsePosterItems(
 ): LetterboxdListEntry[] {
   const entries: LetterboxdListEntry[] = [];
 
-  $("li.posteritem").each((_i, el) => {
+  $("li.posteritem, li.griditem").each((_i, el) => {
     const li = $(el);
     const reactDiv = li.find("div.react-component");
 
@@ -244,6 +244,54 @@ export async function scrapeList(
 
   // Resolve TMDB IDs from Letterboxd film pages
   await resolveTmdbIds(entries);
+
+  return entries;
+}
+
+/**
+ * Scrapes the user's COMPLETE watch history from their films page.
+ * Paginates through all pages until no more posteritems are found.
+ * Does NOT call resolveTmdbIds (too many films, would be too slow).
+ */
+export async function scrapeAllWatchedFilms(
+  username: string
+): Promise<LetterboxdListEntry[]> {
+  const entries: LetterboxdListEntry[] = [];
+  let page = 1;
+  let hasMore = true;
+
+  while (hasMore) {
+    const url =
+      page === 1
+        ? `https://letterboxd.com/${username}/films/`
+        : `https://letterboxd.com/${username}/films/page/${page}/`;
+
+    const res = await fetch(url, {
+      next: { revalidate: 3600 },
+      headers: { "User-Agent": "OscarTracker/1.0" },
+    });
+
+    if (!res.ok) {
+      if (page === 1)
+        throw new Error(`Letterboxd films scrape failed: ${res.status}`);
+      break;
+    }
+
+    const html = await res.text();
+    const $ = cheerio.load(html);
+
+    const pageEntries = parsePosterItems($, entries.length);
+    if (pageEntries.length === 0) {
+      hasMore = false;
+      break;
+    }
+
+    entries.push(...pageEntries);
+
+    const nextPage = $("a.next");
+    hasMore = nextPage.length > 0;
+    page++;
+  }
 
   return entries;
 }

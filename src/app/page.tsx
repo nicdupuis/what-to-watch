@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import useSWR from "swr";
 import { useMovies } from "@/hooks/use-movies";
 import { useSettings } from "@/hooks/use-settings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PosterImage } from "@/components/shared/poster-image";
 import { RatingDisplay } from "@/components/shared/rating-display";
+import { GENRE_MAP } from "@/types/movie";
 import { formatDate } from "@/lib/utils";
 import {
   Film,
@@ -21,10 +23,23 @@ import {
   Sparkles,
   RefreshCw,
   Share2,
+  Clapperboard,
+  User,
 } from "lucide-react";
-import { GenreChart } from "@/components/dashboard/genre-chart";
-import { MonthlyChart } from "@/components/dashboard/monthly-chart";
-import { RatingsChart } from "@/components/dashboard/ratings-chart";
+
+interface Recommendation {
+  tmdbId: number;
+  title: string;
+  posterPath: string | null;
+  releaseDate: string;
+  overview: string;
+  voteAverage: number;
+  genres: number[];
+  score: number;
+  basedOn: string[];
+}
+
+const recFetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export default function HomePage() {
   const { settings, isConfigured, loaded } = useSettings();
@@ -209,48 +224,11 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Charts: Your 2026 at a Glance */}
-      {!isLoading && movies.length > 0 && (
-        <section>
-          <h2 className="mb-4 text-lg font-semibold">
-            Your 2026 at a Glance
-          </h2>
-          <div className="grid gap-4 lg:grid-cols-3">
-            <Card className="lg:col-span-1">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Top Genres
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <GenreChart movies={movies} />
-              </CardContent>
-            </Card>
+      {/* Your Taste Profile */}
+      <TasteProfile movies={watchedListMovies} isLoading={isLoading} />
 
-            <Card className="lg:col-span-1">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Releases by Month
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <MonthlyChart movies={movies} />
-              </CardContent>
-            </Card>
-
-            <Card className="lg:col-span-1">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Source Breakdown
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <RatingsChart movies={movies} />
-              </CardContent>
-            </Card>
-          </div>
-        </section>
-      )}
+      {/* Recommended For You */}
+      <RecommendedForYou username={settings.letterboxdUsername} />
 
       {/* Upcoming This Month */}
       {upcoming.length > 0 && (
@@ -367,5 +345,193 @@ export default function HomePage() {
         </div>
       </section>
     </div>
+  );
+}
+
+const GENRE_COLORS = [
+  "bg-blue-500",
+  "bg-emerald-500",
+  "bg-amber-500",
+  "bg-rose-500",
+  "bg-violet-500",
+];
+
+function TasteProfile({
+  movies,
+  isLoading,
+}: {
+  movies: import("@/types/movie").MovieSummary[];
+  isLoading: boolean;
+}) {
+  if (isLoading || movies.length === 0) return null;
+
+  // Count genres
+  const genreCounts = new Map<number, number>();
+  for (const movie of movies) {
+    for (const gid of movie.genreIds) {
+      genreCounts.set(gid, (genreCounts.get(gid) ?? 0) + 1);
+    }
+  }
+  const topGenres = [...genreCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+  const maxGenreCount = topGenres.length > 0 ? topGenres[0][1] : 1;
+
+  // Count directors
+  const directorCounts = new Map<string, number>();
+  for (const movie of movies) {
+    for (const dir of movie.directors) {
+      directorCounts.set(dir, (directorCounts.get(dir) ?? 0) + 1);
+    }
+  }
+  const topDirectors = [...directorCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
+
+  return (
+    <section>
+      <h2 className="mb-4 text-lg font-semibold flex items-center gap-2">
+        <Clapperboard className="h-5 w-5" />
+        Your Taste Profile
+      </h2>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Top Genres
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {topGenres.map(([genreId, count], i) => {
+              const pct = Math.round((count / maxGenreCount) * 100);
+              return (
+                <div key={genreId} className="space-y-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">
+                      {GENRE_MAP[genreId] ?? `Genre ${genreId}`}
+                    </span>
+                    <span className="text-muted-foreground">{count}</span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                    <div
+                      className={`h-full rounded-full transition-all ${GENRE_COLORS[i % GENRE_COLORS.length]}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+            {topGenres.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                No genre data available yet.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {topDirectors.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Favorite Directors
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {topDirectors.map(([name, count]) => (
+                <div
+                  key={name}
+                  className="flex items-center gap-3 rounded-lg border p-3"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                    <User className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {count} {count === 1 ? "film" : "films"} watched
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function RecommendedForYou({ username }: { username: string }) {
+  const { data: recommendations, isLoading } = useSWR<Recommendation[]>(
+    username
+      ? `/api/recommendations?username=${encodeURIComponent(username)}&limit=8`
+      : null,
+    recFetcher,
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 300000, // 5 min dedup — recommendations are expensive
+    }
+  );
+
+  // Don't render the section at all if there are no recommendations and we're done loading
+  if (!isLoading && (!recommendations || recommendations.length === 0)) {
+    return null;
+  }
+
+  return (
+    <section>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <Sparkles className="h-5 w-5" />
+          Recommended For You
+        </h2>
+      </div>
+      {isLoading ? (
+        <div className="flex gap-4 overflow-x-auto pb-2">
+          {Array.from({ length: 4 }, (_, i) => (
+            <div key={i} className="w-44 flex-shrink-0">
+              <Card className="overflow-hidden">
+                <Skeleton className="h-56 w-full" />
+                <CardContent className="p-2 space-y-1">
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-3 w-36" />
+                </CardContent>
+              </Card>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex gap-4 overflow-x-auto pb-2">
+          {recommendations?.map((rec) => (
+            <Link
+              key={rec.tmdbId}
+              href={`/movies/${rec.tmdbId}`}
+              className="flex-shrink-0"
+            >
+              <Card className="w-44 overflow-hidden transition-all hover:scale-[1.02] hover:shadow-md">
+                <PosterImage
+                  posterPath={rec.posterPath}
+                  alt={rec.title}
+                  size="sm"
+                  className="w-full rounded-b-none"
+                />
+                <CardContent className="p-2">
+                  <p className="truncate text-xs font-medium">{rec.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatDate(rec.releaseDate)}
+                  </p>
+                  {rec.basedOn.length > 0 && (
+                    <p className="mt-1 text-[10px] leading-tight text-muted-foreground line-clamp-2">
+                      Based on: {rec.basedOn.join(", ")}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }

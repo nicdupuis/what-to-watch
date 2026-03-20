@@ -101,6 +101,19 @@ export async function getUpcoming(): Promise<TMDBDiscoverResponse> {
   return res.json();
 }
 
+export async function getRecommendations(
+  movieId: number
+): Promise<TMDBMovie[]> {
+  try {
+    const res = await tmdbFetch(`/movie/${movieId}/recommendations`, 86400);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.results ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export async function searchMovie(
   query: string,
   year?: number
