@@ -91,9 +91,7 @@ export async function GET(request: NextRequest) {
         ? scrapeList(anticipatedListUrl)
         : Promise.resolve([]),
       tag ? scrapeTaggedFilms(username, tag) : Promise.resolve([]),
-      parseRSS(username).then((entries) =>
-        entries.filter((e) => e.year === year)
-      ),
+      parseRSS(username),
       discoverAllMovies(year),
     ]);
 

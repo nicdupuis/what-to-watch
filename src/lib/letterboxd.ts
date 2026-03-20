@@ -5,7 +5,19 @@ import { LetterboxdEntry, LetterboxdListEntry } from "@/types/letterboxd";
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
+  htmlEntities: true,
 });
+
+function decodeEntities(str: string): string {
+  return str
+    .replace(/&#039;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)));
+}
 
 export async function parseRSS(
   username: string
@@ -27,7 +39,7 @@ export async function parseRSS(
   const itemList = Array.isArray(items) ? items : [items];
 
   for (const item of itemList) {
-    const title = item["letterboxd:filmTitle"] || "";
+    const title = decodeEntities(item["letterboxd:filmTitle"] || "");
     const year = parseInt(item["letterboxd:filmYear"] || "0", 10);
     const watchedDate = item["letterboxd:watchedDate"] || "";
     const ratingStr = item["letterboxd:memberRating"];
