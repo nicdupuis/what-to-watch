@@ -9,11 +9,14 @@
     "color": "#E23636",
     "notableFilms": [],
     "topPrizes": [
-      { "prizeName": "Grand Jury Prize (U.S. Dramatic)", "filmTitle": "Plainclothes", "director": "Carmen Emmi" },
-      { "prizeName": "Grand Jury Prize (U.S. Documentary)", "filmTitle": "Predators on the Prairie", "director": "Jaron Halmy" },
-      { "prizeName": "Grand Jury Prize (World Cinema Dramatic)", "filmTitle": "Bunni", "director": "Joko Anwar" },
-      { "prizeName": "Grand Jury Prize (World Cinema Documentary)", "filmTitle": "Bibi", "director": "Lei Lei" },
-      { "prizeName": "Audience Award (U.S. Dramatic)", "filmTitle": "Ricky", "director": "Rashad Frett" }
+      { "prizeName": "Grand Jury Prize (U.S. Dramatic)", "filmTitle": "Josephine", "director": "Beth de Araújo" },
+      { "prizeName": "Grand Jury Prize (U.S. Documentary)", "filmTitle": "Nuisance Bear", "director": "Gabriela Osio Vanden & Jack Weisman" },
+      { "prizeName": "Grand Jury Prize (World Cinema Dramatic)", "filmTitle": "Shame and Money", "director": "Visar Morina" },
+      { "prizeName": "Grand Jury Prize (World Cinema Documentary)", "filmTitle": "To Hold a Mountain", "director": "Biljana Tutorov & Petar Glomazić" },
+      { "prizeName": "Audience Award (U.S. Dramatic)", "filmTitle": "Josephine", "director": "Beth de Araújo" },
+      { "prizeName": "Audience Award (U.S. Documentary)", "filmTitle": "American Pachuco: The Legend of Luis Valdez", "director": "David Alvarado" },
+      { "prizeName": "Audience Award (World Cinema Dramatic)", "filmTitle": "Hold Onto Me", "director": "Myrsini Aristidou" },
+      { "prizeName": "Audience Award (World Cinema Documentary)", "filmTitle": "One in a Million", "director": "Itab Azzam & Jack MacInnes" }
     ]
   },
   {
@@ -26,9 +29,9 @@
     "color": "#C41230",
     "notableFilms": [],
     "topPrizes": [
-      { "prizeName": "Golden Bear", "filmTitle": "Dreams", "director": "Michel Franco" },
-      { "prizeName": "Grand Jury Prize", "filmTitle": "What Does That Nature Remind You Of?", "director": "Zhangke Jia" },
-      { "prizeName": "Best Director", "filmTitle": "If I Had Legs I'd Kick You", "director": "Mary Bronstein" }
+      { "prizeName": "Golden Bear (Best Film)", "filmTitle": "Yellow Letters", "director": "İlker Çatak" },
+      { "prizeName": "Silver Bear Grand Jury Prize", "filmTitle": "Salvation", "director": "Emin Alper" },
+      { "prizeName": "Silver Bear for Best Director", "filmTitle": "Everybody Digs Bill Evans", "director": "Grant Gee" }
     ]
   },
   {

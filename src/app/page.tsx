@@ -86,10 +86,9 @@ export default function HomePage() {
     .sort((a, b) => a.releaseDate.localeCompare(b.releaseDate))
     .slice(0, 5);
 
-  const recentlyWatched = watchedMovies
-    .filter((m) => m.watchedDate)
-    .sort((a, b) => (b.watchedDate ?? "").localeCompare(a.watchedDate ?? ""))
-    .slice(0, 5);
+  const recentlyWatched = watchedListMovies
+    .sort((a, b) => (b.ownerRating ?? 0) - (a.ownerRating ?? 0))
+    .slice(0, 8);
 
   return (
     <div className="space-y-8">
@@ -241,11 +240,11 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Recently Watched */}
+      {/* Your Ranked Films */}
       {recentlyWatched.length > 0 && (
         <section>
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Recently Watched</h2>
+            <h2 className="text-lg font-semibold">Your Ranked Films</h2>
             <Link href="/movies?source=watched-list">
               <Button variant="ghost" size="sm">
                 View All <ArrowRight className="ml-1 h-4 w-4" />

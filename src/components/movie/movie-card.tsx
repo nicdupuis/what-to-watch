@@ -26,7 +26,7 @@ function MovieCard({ movie }: MovieCardProps) {
 
   return (
     <div
-      className="group [perspective:1000px]"
+      className="group cursor-pointer [perspective:1000px]"
       onClick={() => setFlipped((f) => !f)}
     >
       <div

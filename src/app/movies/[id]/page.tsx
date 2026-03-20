@@ -4,15 +4,13 @@ import { use } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import useSWR from "swr";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PosterImage } from "@/components/shared/poster-image";
-import { RatingDisplay } from "@/components/shared/rating-display";
 import { tmdbImageUrl, formatDate } from "@/lib/utils";
-import type { MovieDetail } from "@/types/movie";
-import { GENRE_MAP } from "@/types/movie";
+import { TMDBMovieDetail } from "@/types/movie";
 import { ArrowLeft, Clock, Calendar, ExternalLink } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -23,7 +21,7 @@ interface MovieDetailPageProps {
 
 export default function MovieDetailPage({ params }: MovieDetailPageProps) {
   const { id } = use(params);
-  const { data: movie, error, isLoading } = useSWR<MovieDetail>(
+  const { data: movie, error, isLoading } = useSWR<TMDBMovieDetail>(
     `/api/tmdb/movie/${id}`,
     fetcher,
   );
@@ -70,6 +68,13 @@ export default function MovieDetailPage({ params }: MovieDetailPageProps) {
     );
   }
 
+  const directors =
+    movie.credits?.crew?.filter((c) => c.job === "Director").map((c) => c.name) ?? [];
+  const cast =
+    movie.credits?.cast?.sort((a, b) => a.order - b.order).slice(0, 8).map((c) => c.name) ?? [];
+  const genres = movie.genres ?? [];
+  const providers = movie["watch/providers"]?.results?.CA;
+
   return (
     <div className="space-y-6">
       <Link href="/movies">
@@ -80,10 +85,10 @@ export default function MovieDetailPage({ params }: MovieDetailPageProps) {
       </Link>
 
       {/* Backdrop */}
-      {movie.backdropPath && (
+      {movie.backdrop_path && (
         <div className="relative aspect-[21/9] w-full overflow-hidden rounded-xl">
           <Image
-            src={tmdbImageUrl(movie.backdropPath, "w1280")}
+            src={tmdbImageUrl(movie.backdrop_path, "w1280")}
             alt={`${movie.title} backdrop`}
             fill
             className="object-cover"
@@ -98,7 +103,7 @@ export default function MovieDetailPage({ params }: MovieDetailPageProps) {
         {/* Poster */}
         <div className="flex-shrink-0">
           <PosterImage
-            posterPath={movie.posterPath}
+            posterPath={movie.poster_path}
             alt={movie.title}
             size="lg"
             className="mx-auto rounded-lg shadow-lg md:mx-0"
@@ -117,10 +122,10 @@ export default function MovieDetailPage({ params }: MovieDetailPageProps) {
           </div>
 
           <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-            {movie.releaseDate && (
+            {movie.release_date && (
               <span className="flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
-                {formatDate(movie.releaseDate)}
+                {formatDate(movie.release_date)}
               </span>
             )}
             {movie.runtime && (
@@ -129,39 +134,41 @@ export default function MovieDetailPage({ params }: MovieDetailPageProps) {
                 {movie.runtime} min
               </span>
             )}
+            {movie.vote_average > 0 && (
+              <Badge variant="secondary">
+                TMDB {movie.vote_average.toFixed(1)}
+              </Badge>
+            )}
           </div>
 
           {/* Genres */}
-          {movie.genreIds.length > 0 && (
+          {genres.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {movie.genreIds.map((genreId) => {
-                const name = GENRE_MAP[genreId];
-                return name ? (
-                  <Badge key={genreId} variant="secondary">
-                    {name}
-                  </Badge>
-                ) : null;
-              })}
+              {genres.map((g) => (
+                <Badge key={g.id} variant="secondary">
+                  {g.name}
+                </Badge>
+              ))}
             </div>
           )}
 
           {/* Directors */}
-          {movie.directors.length > 0 && (
+          {directors.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground">
-                {movie.directors.length === 1 ? "Director" : "Directors"}
+                {directors.length === 1 ? "Director" : "Directors"}
               </h3>
-              <p className="mt-0.5">{movie.directors.join(", ")}</p>
+              <p className="mt-0.5">{directors.join(", ")}</p>
             </div>
           )}
 
           {/* Cast */}
-          {movie.cast.length > 0 && (
+          {cast.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground">
                 Top Cast
               </h3>
-              <p className="mt-0.5">{movie.cast.slice(0, 5).join(", ")}</p>
+              <p className="mt-0.5">{cast.join(", ")}</p>
             </div>
           )}
 
@@ -175,33 +182,34 @@ export default function MovieDetailPage({ params }: MovieDetailPageProps) {
             </div>
           )}
 
-          {/* Watched status */}
-          {movie.watched && (
-            <Card className="border-green-500/30 bg-green-500/5">
-              <CardContent className="flex items-center gap-4 py-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500 text-white">
-                  <span className="text-lg">&#10003;</span>
-                </div>
-                <div>
-                  <p className="font-medium">Watched</p>
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                    {movie.watchedDate && (
-                      <span>{formatDate(movie.watchedDate)}</span>
-                    )}
-                    {movie.userRating !== null && movie.userRating > 0 && (
-                      <RatingDisplay rating={movie.userRating} size="sm" />
-                    )}
+          {/* Streaming providers */}
+          {providers?.flatrate && providers.flatrate.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-muted-foreground">
+                Streaming On
+              </h3>
+              <div className="mt-1 flex flex-wrap gap-2">
+                {providers.flatrate.map((p) => (
+                  <div key={p.provider_name} className="flex items-center gap-1.5">
+                    <Image
+                      src={tmdbImageUrl(p.logo_path, "w92")}
+                      alt={p.provider_name}
+                      width={24}
+                      height={24}
+                      className="rounded"
+                    />
+                    <span className="text-xs">{p.provider_name}</span>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                ))}
+              </div>
+            </div>
           )}
 
           {/* External links */}
           <div className="flex flex-wrap gap-3 pt-2">
-            {movie.imdbId && (
+            {movie.imdb_id && (
               <a
-                href={`https://www.imdb.com/title/${movie.imdbId}`}
+                href={`https://www.imdb.com/title/${movie.imdb_id}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -211,29 +219,26 @@ export default function MovieDetailPage({ params }: MovieDetailPageProps) {
                 </Button>
               </a>
             )}
-            {movie.letterboxdUrl ? (
-              <a
-                href={movie.letterboxdUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Button variant="outline" size="sm">
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Letterboxd
-                </Button>
-              </a>
-            ) : (
-              <a
-                href={`https://letterboxd.com/tmdb/${movie.tmdbId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Button variant="outline" size="sm">
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Letterboxd
-                </Button>
-              </a>
-            )}
+            <a
+              href={`https://letterboxd.com/tmdb/${movie.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="outline" size="sm">
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Letterboxd
+              </Button>
+            </a>
+            <a
+              href={`https://www.themoviedb.org/movie/${movie.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="outline" size="sm">
+                <ExternalLink className="mr-2 h-4 w-4" />
+                TMDB
+              </Button>
+            </a>
           </div>
         </div>
       </div>
