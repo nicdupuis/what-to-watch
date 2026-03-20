@@ -45,7 +45,11 @@ function MovieCard({ movie }: MovieCardProps) {
               size="md"
               className="w-full h-[300px] object-cover rounded-b-none"
             />
-            {movie.watched && <WatchedBadge rating={movie.userRating} />}
+            {movie.watched && (
+              <WatchedBadge
+                rating={movie.userRating ?? (movie.ownerRating ? movie.ownerRating / 2 : null)}
+              />
+            )}
             {movie.source === "watched-list" && movie.ownerRating !== null && (
               <div className="absolute top-2 left-2 flex h-7 min-w-7 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-bold text-primary-foreground shadow">
                 {movie.ownerRating}/10

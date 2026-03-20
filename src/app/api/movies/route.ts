@@ -174,7 +174,7 @@ export async function GET(request: NextRequest) {
         voteAverage: tmdb?.vote_average ?? 0,
         popularity: tmdb?.popularity ?? 0,
         voteCount: tmdb?.vote_count ?? 0,
-        watched: !!rssEntry,
+        watched: true, // on the ranked list = watched
         userRating: rssEntry?.rating ?? null,
         watchedDate: rssEntry?.watchedDate ?? null,
         listRanking: entry.position,
