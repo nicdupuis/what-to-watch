@@ -12,6 +12,7 @@ const navLinks = [
   { href: "/movies", label: "Movies" },
   { href: "/calendar", label: "Calendar" },
   { href: "/festivals", label: "Festivals" },
+  { href: "/awards", label: "Awards" },
   { href: "/showtimes", label: "Showtimes" },
 ];
 

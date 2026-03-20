@@ -1,0 +1,207 @@
+[
+  {
+    "id": "critics-choice-2026",
+    "name": "Critics Choice Awards",
+    "shortName": "Critics Choice",
+    "date": "2026-01-05",
+    "color": "#1E88E5",
+    "categories": [
+      {
+        "name": "Best Picture",
+        "winner": { "title": "One Battle After Another" },
+        "nominees": [{ "title": "One Battle After Another" }]
+      },
+      {
+        "name": "Best Director",
+        "winner": { "title": "One Battle After Another", "person": "Paul Thomas Anderson" },
+        "nominees": [{ "title": "One Battle After Another", "person": "Paul Thomas Anderson" }]
+      },
+      {
+        "name": "Best Actor",
+        "winner": { "title": "Marty Supreme", "person": "Timothée Chalamet" },
+        "nominees": [{ "title": "Marty Supreme", "person": "Timothée Chalamet" }]
+      },
+      {
+        "name": "Best Actress",
+        "winner": { "title": "Hamnet", "person": "Jessie Buckley" },
+        "nominees": [{ "title": "Hamnet", "person": "Jessie Buckley" }]
+      },
+      {
+        "name": "Best Supporting Actor",
+        "winner": { "title": "Frankenstein", "person": "Jacob Elordi" },
+        "nominees": [{ "title": "Frankenstein", "person": "Jacob Elordi" }]
+      },
+      {
+        "name": "Best Supporting Actress",
+        "winner": { "title": "Weapons", "person": "Amy Madigan" },
+        "nominees": [{ "title": "Weapons", "person": "Amy Madigan" }]
+      }
+    ]
+  },
+  {
+    "id": "golden-globes-2026",
+    "name": "Golden Globe Awards",
+    "shortName": "Globes",
+    "date": "2026-01-11",
+    "color": "#C6A15B",
+    "categories": [
+      {
+        "name": "Best Drama",
+        "winner": { "title": "Hamnet" },
+        "nominees": [{ "title": "Hamnet" }]
+      },
+      {
+        "name": "Best Comedy/Musical",
+        "winner": { "title": "One Battle After Another" },
+        "nominees": [{ "title": "One Battle After Another" }]
+      },
+      {
+        "name": "Best Director",
+        "winner": { "title": "One Battle After Another", "person": "Paul Thomas Anderson" },
+        "nominees": [{ "title": "One Battle After Another", "person": "Paul Thomas Anderson" }]
+      },
+      {
+        "name": "Best Actor Drama",
+        "winner": { "title": "The Secret Agent", "person": "Wagner Moura" },
+        "nominees": [{ "title": "The Secret Agent", "person": "Wagner Moura" }]
+      },
+      {
+        "name": "Best Actress Drama",
+        "winner": { "title": "Hamnet", "person": "Jessie Buckley" },
+        "nominees": [{ "title": "Hamnet", "person": "Jessie Buckley" }]
+      },
+      {
+        "name": "Best Actor Comedy",
+        "winner": { "title": "Marty Supreme", "person": "Timothée Chalamet" },
+        "nominees": [{ "title": "Marty Supreme", "person": "Timothée Chalamet" }]
+      },
+      {
+        "name": "Best Actress Comedy",
+        "winner": { "title": "If I Had Legs I'd Kick You", "person": "Rose Byrne" },
+        "nominees": [{ "title": "If I Had Legs I'd Kick You", "person": "Rose Byrne" }]
+      }
+    ]
+  },
+  {
+    "id": "bafta-2026",
+    "name": "BAFTA Film Awards",
+    "shortName": "BAFTA",
+    "date": "2026-02-22",
+    "color": "#D4AF37",
+    "categories": [
+      {
+        "name": "Best Film",
+        "winner": { "title": "One Battle After Another" },
+        "nominees": [{ "title": "One Battle After Another" }]
+      },
+      {
+        "name": "Best Director",
+        "winner": { "title": "One Battle After Another", "person": "Paul Thomas Anderson" },
+        "nominees": [{ "title": "One Battle After Another", "person": "Paul Thomas Anderson" }]
+      },
+      {
+        "name": "Best Leading Actor",
+        "winner": { "title": "Sinners", "person": "Michael B. Jordan" },
+        "nominees": [{ "title": "Sinners", "person": "Michael B. Jordan" }]
+      },
+      {
+        "name": "Best Leading Actress",
+        "winner": { "title": "Hamnet", "person": "Jessie Buckley" },
+        "nominees": [{ "title": "Hamnet", "person": "Jessie Buckley" }]
+      },
+      {
+        "name": "Best Supporting Actor",
+        "winner": { "title": "One Battle After Another", "person": "Sean Penn" },
+        "nominees": [{ "title": "One Battle After Another", "person": "Sean Penn" }]
+      },
+      {
+        "name": "Best Supporting Actress",
+        "winner": { "title": "Weapons", "person": "Amy Madigan" },
+        "nominees": [{ "title": "Weapons", "person": "Amy Madigan" }]
+      }
+    ]
+  },
+  {
+    "id": "sag-2026",
+    "name": "SAG Awards",
+    "shortName": "SAG",
+    "date": "2026-03-01",
+    "color": "#4CAF50",
+    "categories": [
+      {
+        "name": "Best Ensemble",
+        "winner": { "title": "Sinners" },
+        "nominees": [{ "title": "Sinners" }]
+      },
+      {
+        "name": "Best Actor",
+        "winner": { "title": "Sinners", "person": "Michael B. Jordan" },
+        "nominees": [{ "title": "Sinners", "person": "Michael B. Jordan" }]
+      },
+      {
+        "name": "Best Actress",
+        "winner": { "title": "Hamnet", "person": "Jessie Buckley" },
+        "nominees": [{ "title": "Hamnet", "person": "Jessie Buckley" }]
+      },
+      {
+        "name": "Best Supporting Actor",
+        "winner": { "title": "One Battle After Another", "person": "Sean Penn" },
+        "nominees": [{ "title": "One Battle After Another", "person": "Sean Penn" }]
+      },
+      {
+        "name": "Best Supporting Actress",
+        "winner": { "title": "Weapons", "person": "Amy Madigan" },
+        "nominees": [{ "title": "Weapons", "person": "Amy Madigan" }]
+      }
+    ]
+  },
+  {
+    "id": "oscars-2026",
+    "name": "Academy Awards",
+    "shortName": "Oscars",
+    "date": "2026-03-15",
+    "color": "#FFD700",
+    "categories": [
+      {
+        "name": "Best Picture",
+        "winner": { "title": "One Battle After Another" },
+        "nominees": [{ "title": "One Battle After Another" }]
+      },
+      {
+        "name": "Best Director",
+        "winner": { "title": "One Battle After Another", "person": "Paul Thomas Anderson" },
+        "nominees": [{ "title": "One Battle After Another", "person": "Paul Thomas Anderson" }]
+      },
+      {
+        "name": "Best Actor",
+        "winner": { "title": "Sinners", "person": "Michael B. Jordan" },
+        "nominees": [{ "title": "Sinners", "person": "Michael B. Jordan" }]
+      },
+      {
+        "name": "Best Actress",
+        "winner": { "title": "Hamnet", "person": "Jessie Buckley" },
+        "nominees": [{ "title": "Hamnet", "person": "Jessie Buckley" }]
+      },
+      {
+        "name": "Best Supporting Actor",
+        "winner": { "title": "One Battle After Another", "person": "Sean Penn" },
+        "nominees": [{ "title": "One Battle After Another", "person": "Sean Penn" }]
+      },
+      {
+        "name": "Best Supporting Actress",
+        "winner": { "title": "Weapons", "person": "Amy Madigan" },
+        "nominees": [{ "title": "Weapons", "person": "Amy Madigan" }]
+      },
+      {
+        "name": "Best Original Screenplay",
+        "winner": { "title": "Sinners", "person": "Ryan Coogler" },
+        "nominees": [{ "title": "Sinners", "person": "Ryan Coogler" }]
+      },
+      {
+        "name": "Best Animated Feature",
+        "winner": { "title": "KPop Demon Hunters" },
+        "nominees": [{ "title": "KPop Demon Hunters" }]
+      }
+    ]
+  }
+]
