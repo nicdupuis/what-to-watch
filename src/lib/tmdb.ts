@@ -1,4 +1,5 @@
 import { TMDBDiscoverResponse, TMDBMovie, TMDBMovieDetail } from "@/types/movie";
+import { TMDBTVShow } from "@/types/tv";
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
 const BASE_URL = "https://api.themoviedb.org/3";
@@ -125,4 +126,36 @@ export async function searchMovie(
   );
   if (!res.ok) throw new Error(`TMDB search failed: ${res.status}`);
   return res.json();
+}
+
+// --- TV Shows ---
+
+export async function getTrendingTV(): Promise<TMDBTVShow[]> {
+  const res = await tmdbFetch(`/trending/tv/week`, 3600);
+  if (!res.ok) throw new Error(`TMDB trending TV failed: ${res.status}`);
+  const data = await res.json();
+  return data.results;
+}
+
+export async function getOnTheAirTV(): Promise<TMDBTVShow[]> {
+  const res = await tmdbFetch(`/tv/on_the_air`, 3600);
+  if (!res.ok) throw new Error(`TMDB on-the-air TV failed: ${res.status}`);
+  const data = await res.json();
+  return data.results;
+}
+
+export async function getTVDetail(id: number): Promise<any> {
+  const res = await tmdbFetch(
+    `/tv/${id}?append_to_response=watch/providers,credits`,
+    86400
+  );
+  if (!res.ok) throw new Error(`TMDB tv/${id} failed: ${res.status}`);
+  return res.json();
+}
+
+export async function getTopRatedTV(): Promise<TMDBTVShow[]> {
+  const res = await tmdbFetch(`/tv/top_rated`, 86400);
+  if (!res.ok) throw new Error(`TMDB top-rated TV failed: ${res.status}`);
+  const data = await res.json();
+  return data.results;
 }

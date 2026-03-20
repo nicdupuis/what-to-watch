@@ -120,7 +120,7 @@ export default function HomePage() {
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <p className="mt-1 text-muted-foreground">
-            Your 2026 Oscar season at a glance
+            Your 2026 season at a glance
           </p>
         </div>
         <Button
@@ -462,16 +462,25 @@ function TasteProfile({
 }
 
 function RecommendedForYou({ username }: { username: string }) {
-  const { data: recommendations, isLoading } = useSWR<Recommendation[]>(
+  const [cacheBust, setCacheBust] = useState(0);
+  const { data: recommendations, isLoading, mutate } = useSWR<Recommendation[]>(
     username
-      ? `/api/recommendations?username=${encodeURIComponent(username)}&limit=8`
+      ? `/api/recommendations?username=${encodeURIComponent(username)}&limit=8&_=${cacheBust}`
       : null,
     recFetcher,
     {
       revalidateOnFocus: false,
-      dedupingInterval: 300000, // 5 min dedup — recommendations are expensive
+      dedupingInterval: 10000,
     }
   );
+  const [refreshing, setRefreshing] = useState(false);
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    setCacheBust(Date.now());
+    await mutate();
+    setRefreshing(false);
+  }
 
   // Don't render the section at all if there are no recommendations and we're done loading
   if (!isLoading && (!recommendations || recommendations.length === 0)) {
@@ -485,6 +494,15 @@ function RecommendedForYou({ username }: { username: string }) {
           <Sparkles className="h-5 w-5" />
           Recommended For You
         </h2>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={refreshing || isLoading}
+        >
+          <RefreshCw className={`mr-1 h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+          {refreshing ? "Loading..." : "New picks"}
+        </Button>
       </div>
       {isLoading ? (
         <div className="flex gap-4 overflow-x-auto pb-2">
