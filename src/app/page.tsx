@@ -86,7 +86,7 @@ export default function HomePage() {
       (m) =>
         !m.watched &&
         m.releaseDate > today &&
-        (m.source === "anticipated" || m.anticipated || m.popularity >= 50)
+        (m.source === "anticipated" || m.anticipated || m.popularity >= 5)
     )
     .sort((a, b) => a.releaseDate.localeCompare(b.releaseDate))
     .slice(0, 5);
