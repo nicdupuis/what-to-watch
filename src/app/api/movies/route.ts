@@ -231,7 +231,7 @@ export async function GET(request: NextRequest) {
     // 7. Add popular TMDB discover movies not on either list
     for (const movie of tmdbMovies) {
       if (seenTmdbIds.has(movie.id)) continue;
-      if (!movie.poster_path) continue;
+      if (!movie.poster_path || movie.popularity < MIN_POPULARITY) continue;
 
       const normalizedTitle = normalize(movie.title);
       if (seenTitles.has(normalizedTitle)) continue;
