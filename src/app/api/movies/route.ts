@@ -12,7 +12,7 @@ function normalize(title: string): string {
     .replace(/[""]/g, '"');
 }
 
-const MIN_POPULARITY = 5;
+const MIN_POPULARITY = 8;
 
 /**
  * Enriches Letterboxd entries with TMDB data.
