@@ -45,6 +45,9 @@ async function resolveSingleTmdbId(filmSlug: string): Promise<number | null> {
   }
 }
 
+// Don't cache this route — each request should give fresh random seeds
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -73,14 +76,11 @@ export async function GET(request: NextRequest) {
       allWatched.map((entry) => normalize(entry.title))
     );
 
-    // 3. Pick a diverse sample of 5-star films as seeds
-    //    Spread across the list to avoid clustering around one era
-    const maxSeeds = 12;
-    let seedEntries = fiveStarFilms;
-    if (seedEntries.length > maxSeeds) {
-      const step = Math.floor(seedEntries.length / maxSeeds);
-      seedEntries = Array.from({ length: maxSeeds }, (_, i) => fiveStarFilms[i * step]);
-    }
+    // 3. Pick a random sample of 5-star films as seeds
+    //    Shuffle and pick 10 so each refresh gives different results
+    const maxSeeds = 10;
+    const shuffled = [...fiveStarFilms].sort(() => Math.random() - 0.5);
+    const seedEntries = shuffled.slice(0, maxSeeds);
 
     // 4. Resolve TMDB IDs via Letterboxd film pages (slug-based, reliable)
     const resolvedSeeds = await Promise.all(
