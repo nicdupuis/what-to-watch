@@ -5,8 +5,19 @@ import { MovieSummary } from "@/types/movie";
 import { LetterboxdEntry, LetterboxdListEntry } from "@/types/letterboxd";
 
 function normalize(title: string): string {
-  return title.toLowerCase().trim();
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/['']/g, "'")
+    .replace(/[""]/g, '"');
 }
+
+// Minimum popularity threshold to filter out obscure releases.
+// TMDB popularity is roughly logarithmic — values above ~5 are
+// movies with meaningful audience awareness. Setting this at 5
+// keeps Oscar contenders (dramas, festival films) while dropping
+// micro-budget and regional releases that clutter the grid.
+const MIN_POPULARITY = 5;
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,62 +38,40 @@ export async function GET(request: NextRequest) {
     const listSlug = searchParams.get("listSlug");
     const tag = searchParams.get("tag");
 
-    // 1. Fetch all TMDB discover results for the year
-    const tmdbMovies = await discoverAllMovies(year);
+    // 1. Fetch TMDB discover results (filtered for quality)
+    const tmdbMoviesRaw = await discoverAllMovies(year);
+    const tmdbMovies = tmdbMoviesRaw.filter(
+      (m) => m.popularity >= MIN_POPULARITY && m.poster_path !== null
+    );
 
-    // 2. Fetch Letterboxd data (gracefully degrade on failure)
+    // 2. Fetch Letterboxd data — each source isolated so one failure
+    //    doesn't nuke the others
     let rssEntries: LetterboxdEntry[] = [];
     let listEntries: LetterboxdListEntry[] = [];
     let tagEntries: LetterboxdListEntry[] = [];
 
-    try {
-      const letterboxdPromises: Promise<void>[] = [];
+    const settled = await Promise.allSettled([
+      parseRSS(username).then((entries) => entries.filter((e) => e.year === year)),
+      tag ? scrapeTaggedFilms(username, tag) : Promise.resolve([]),
+      listSlug ? scrapeList(username, listSlug) : Promise.resolve([]),
+    ]);
 
-      // Always fetch RSS and filter to the year
-      letterboxdPromises.push(
-        parseRSS(username).then((entries) => {
-          rssEntries = entries.filter((e) => e.year === year);
-        })
-      );
-
-      // Fetch tag-based films if tag is provided
-      if (tag) {
-        letterboxdPromises.push(
-          scrapeTaggedFilms(username, tag).then((entries) => {
-            tagEntries = entries;
-          })
-        );
-      }
-
-      // Fetch list-based films if listSlug is provided
-      if (listSlug) {
-        letterboxdPromises.push(
-          scrapeList(username, listSlug).then((entries) => {
-            listEntries = entries;
-          })
-        );
-      }
-
-      await Promise.all(letterboxdPromises);
-    } catch {
-      // If Letterboxd calls fail, continue with TMDB data only
-      rssEntries = [];
-      listEntries = [];
-      tagEntries = [];
-    }
+    if (settled[0].status === "fulfilled") rssEntries = settled[0].value;
+    if (settled[1].status === "fulfilled") tagEntries = settled[1].value;
+    if (settled[2].status === "fulfilled") listEntries = settled[2].value;
 
     // 3. Build lookup maps from Letterboxd data
-    // RSS entries have ratings and watchedDate -- keyed by normalized "title|year"
     const rssMap = new Map<string, LetterboxdEntry>();
     for (const entry of rssEntries) {
       const key = `${normalize(entry.title)}|${entry.year}`;
-      // Keep the most recent entry if duplicates exist
-      if (!rssMap.has(key) || entry.watchedDate > (rssMap.get(key)!.watchedDate)) {
+      if (
+        !rssMap.has(key) ||
+        entry.watchedDate > rssMap.get(key)!.watchedDate
+      ) {
         rssMap.set(key, entry);
       }
     }
 
-    // Combine list and tag entries into a set of watched titles
     const letterboxdWatchedSet = new Set<string>();
     for (const entry of [...listEntries, ...tagEntries]) {
       letterboxdWatchedSet.add(`${normalize(entry.title)}|${entry.year}`);
