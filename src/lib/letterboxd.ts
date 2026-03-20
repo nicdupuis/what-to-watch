@@ -249,6 +249,55 @@ export async function scrapeList(
 }
 
 /**
+ * Scrapes the user's films filtered by star rating.
+ * URL: /username/films/rated/{rating}/ where rating is 0.5-5 in 0.5 increments
+ * Returns films with their slugs (for TMDB ID resolution).
+ */
+export async function scrapeRatedFilms(
+  username: string,
+  rating: number
+): Promise<LetterboxdListEntry[]> {
+  const entries: LetterboxdListEntry[] = [];
+  let page = 1;
+  let hasMore = true;
+  const ratingPath = rating % 1 === 0 ? `${rating}` : `${rating}`;
+
+  while (hasMore) {
+    const url =
+      page === 1
+        ? `https://letterboxd.com/${username}/films/rated/${ratingPath}/`
+        : `https://letterboxd.com/${username}/films/rated/${ratingPath}/page/${page}/`;
+
+    const res = await fetch(url, {
+      next: { revalidate: 3600 },
+      headers: { "User-Agent": "OscarTracker/1.0" },
+    });
+
+    if (!res.ok) {
+      if (page === 1) return [];
+      break;
+    }
+
+    const html = await res.text();
+    const $ = cheerio.load(html);
+
+    const pageEntries = parsePosterItems($, entries.length);
+    if (pageEntries.length === 0) {
+      hasMore = false;
+      break;
+    }
+
+    entries.push(...pageEntries);
+
+    const nextPage = $("a.next");
+    hasMore = nextPage.length > 0;
+    page++;
+  }
+
+  return entries;
+}
+
+/**
  * Scrapes the user's COMPLETE watch history from their films page.
  * Paginates through all pages until no more posteritems are found.
  * Does NOT call resolveTmdbIds (too many films, would be too slow).

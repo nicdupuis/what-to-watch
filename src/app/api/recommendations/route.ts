@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { scrapeAllWatchedFilms } from "@/lib/letterboxd";
+import { scrapeAllWatchedFilms, scrapeRatedFilms } from "@/lib/letterboxd";
 import { getRecommendations } from "@/lib/tmdb";
 import { TMDBMovie } from "@/types/movie";
 
@@ -58,8 +58,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 1. Scrape the user's full watch history (for exclusion list)
-    const allWatched = await scrapeAllWatchedFilms(username);
+    // 1. Fetch in parallel: full watch history (for exclusion) + all 5-star films (for seeds)
+    const [allWatched, fiveStarFilms] = await Promise.all([
+      scrapeAllWatchedFilms(username),
+      scrapeRatedFilms(username, 5),
+    ]);
 
     if (allWatched.length === 0) {
       return NextResponse.json([]);
@@ -70,38 +73,27 @@ export async function GET(request: NextRequest) {
       allWatched.map((entry) => normalize(entry.title))
     );
 
-    // 3. Get the user's RSS diary to find highly-rated films (RSS has ratings)
-    const { parseRSS } = await import("@/lib/letterboxd");
-    const rssEntries = await parseRSS(username);
+    // 3. Pick a diverse sample of 5-star films as seeds
+    //    Spread across the list to avoid clustering around one era
+    const maxSeeds = 12;
+    let seedEntries = fiveStarFilms;
+    if (seedEntries.length > maxSeeds) {
+      const step = Math.floor(seedEntries.length / maxSeeds);
+      seedEntries = Array.from({ length: maxSeeds }, (_, i) => fiveStarFilms[i * step]);
+    }
 
-    // Pick only 5-star films — the user's absolute favorites
-    const topRated = rssEntries
-      .filter((e) => e.rating !== null && e.rating >= 5)
-      .slice(0, 10);
-
-    // If not enough 5-star films, fall back to 4.5+
-    const seedFilms = topRated.length >= 2
-      ? topRated
-      : rssEntries.filter((e) => e.rating !== null && e.rating >= 4.5).slice(0, 8);
-
-    // 4. Resolve TMDB IDs for seed films via search (RSS entries don't have slugs)
+    // 4. Resolve TMDB IDs via Letterboxd film pages (slug-based, reliable)
     const resolvedSeeds = await Promise.all(
-      seedFilms.map(async (entry) => {
-        try {
-          const { searchMovie } = await import("@/lib/tmdb");
-          const res = await searchMovie(entry.title, entry.year || undefined);
-          const tmdbId = res.results[0]?.id ?? null;
-          return { title: entry.title, rating: entry.rating, tmdbId };
-        } catch {
-          return { title: entry.title, rating: entry.rating, tmdbId: null };
-        }
+      seedEntries.map(async (entry) => {
+        const tmdbId = await resolveSingleTmdbId(entry.filmSlug);
+        return { title: entry.title, tmdbId };
       })
     );
 
     // 5. For each seed film, get TMDB recommendations
     const recMap = new Map<
       number,
-      { movie: TMDBMovie; basedOn: Set<string>; seedRatings: number[] }
+      { movie: TMDBMovie; basedOn: Set<string> }
     >();
 
     await Promise.all(
@@ -115,12 +107,10 @@ export async function GET(request: NextRequest) {
             const existing = recMap.get(rec.id);
             if (existing) {
               existing.basedOn.add(seed.title);
-              existing.seedRatings.push(seed.rating ?? 4);
             } else {
               recMap.set(rec.id, {
                 movie: rec,
                 basedOn: new Set([seed.title]),
-                seedRatings: [seed.rating ?? 4],
               });
             }
           }
@@ -129,13 +119,11 @@ export async function GET(request: NextRequest) {
 
     // 6. Build recommendations with scoring
     const filtered: Recommendation[] = [];
-    for (const [, { movie, basedOn, seedRatings }] of recMap) {
+    for (const [, { movie, basedOn }] of recMap) {
       if (movie.vote_average < 5 && movie.vote_count > 0) continue;
 
-      // Score: base from how many seed films recommended this
-      let score = basedOn.size;
-
-      // No recency boost — let quality and match count speak for themselves
+      // Score = how many of the user's 5-star films recommended this
+      const score = basedOn.size;
 
       filtered.push({
         tmdbId: movie.id,
