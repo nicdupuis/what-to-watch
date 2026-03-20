@@ -82,7 +82,12 @@ export default function HomePage() {
       : 0;
 
   const upcoming = movies
-    .filter((m) => !m.watched && m.releaseDate > today)
+    .filter(
+      (m) =>
+        !m.watched &&
+        m.releaseDate > today &&
+        (m.source === "anticipated" || m.anticipated || m.popularity >= 50)
+    )
     .sort((a, b) => a.releaseDate.localeCompare(b.releaseDate))
     .slice(0, 5);
 
