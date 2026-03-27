@@ -40,7 +40,8 @@ interface Recommendation {
   basedOn: string[];
 }
 
-const recFetcher = (url: string) => fetch(url).then((r) => r.json());
+const recFetcher = (url: string) =>
+  fetch(url).then((r) => r.json()).then((d) => (Array.isArray(d) ? d : []));
 
 export default function HomePage() {
   const { settings, isConfigured, loaded } = useSettings();
@@ -228,7 +229,7 @@ export default function HomePage() {
       {/* Your Taste Profile — based on ALL films watched in 2026 */}
       {isConfigured && <TasteProfile username={settings.letterboxdUsername} />}
 
-      {/* Recommended For You */}
+      {/* Recommended For You — local only, hidden on Vercel */}
       <RecommendedForYou username={settings.letterboxdUsername} />
 
       {/* Upcoming This Month */}
@@ -528,10 +529,7 @@ function RecommendedForYou({ username }: { username: string }) {
       ? `/api/recommendations?username=${encodeURIComponent(username)}&limit=8&_=${cacheBust}`
       : null,
     recFetcher,
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 10000,
-    }
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
   );
   const [refreshing, setRefreshing] = useState(false);
 
@@ -542,7 +540,6 @@ function RecommendedForYou({ username }: { username: string }) {
     setRefreshing(false);
   }
 
-  // Don't render the section at all if there are no recommendations and we're done loading
   if (!isLoading && (!recommendations || recommendations.length === 0)) {
     return null;
   }
@@ -582,11 +579,7 @@ function RecommendedForYou({ username }: { username: string }) {
       ) : (
         <div className="flex gap-4 overflow-x-auto pb-2">
           {recommendations?.map((rec) => (
-            <Link
-              key={rec.tmdbId}
-              href={`/movies/${rec.tmdbId}`}
-              className="flex-shrink-0"
-            >
+            <Link key={rec.tmdbId} href={`/movies/${rec.tmdbId}`} className="flex-shrink-0">
               <Card className="w-44 overflow-hidden transition-all hover:scale-[1.02] hover:shadow-md">
                 <PosterImage
                   posterPath={rec.posterPath}
@@ -596,9 +589,7 @@ function RecommendedForYou({ username }: { username: string }) {
                 />
                 <CardContent className="p-2">
                   <p className="truncate text-xs font-medium">{rec.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDate(rec.releaseDate)}
-                  </p>
+                  <p className="text-xs text-muted-foreground">{formatDate(rec.releaseDate)}</p>
                   {rec.basedOn.length > 0 && (
                     <p className="mt-1 text-[10px] leading-tight text-muted-foreground line-clamp-2">
                       Based on: {rec.basedOn.join(", ")}

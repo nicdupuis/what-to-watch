@@ -2,6 +2,14 @@ import { XMLParser } from "fast-xml-parser";
 import * as cheerio from "cheerio";
 import { LetterboxdEntry, LetterboxdListEntry } from "@/types/letterboxd";
 
+const BROWSER_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  Accept:
+    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9",
+};
+
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
@@ -24,7 +32,7 @@ export async function parseRSS(
 ): Promise<LetterboxdEntry[]> {
   const res = await fetch(`https://letterboxd.com/${username}/rss/`, {
     next: { revalidate: 1800 },
-    headers: { "User-Agent": "OscarTracker/1.0" },
+    headers: BROWSER_HEADERS,
   });
   if (!res.ok) {
     throw new Error(`Letterboxd RSS failed: ${res.status}`);
@@ -106,7 +114,7 @@ async function resolveListUrl(input: string): Promise<string> {
     if (!isAllowedUrl(trimmed)) throw new Error("Invalid URL domain");
     const res = await fetch(trimmed, {
       redirect: "follow",
-      headers: { "User-Agent": "OscarTracker/1.0" },
+      headers: BROWSER_HEADERS,
     });
     const finalUrl = res.url;
     // Verify the redirect target is also on an allowed domain
@@ -178,7 +186,7 @@ async function resolveTmdbIds(
             `https://letterboxd.com/film/${entry.filmSlug}/`,
             {
               next: { revalidate: 86400 },
-              headers: { "User-Agent": "OscarTracker/1.0" },
+              headers: BROWSER_HEADERS,
             }
           );
           if (!res.ok) return;
@@ -232,7 +240,7 @@ export async function scrapeList(
 
     const res = await fetch(url, {
       next: { revalidate: 1800 },
-      headers: { "User-Agent": "OscarTracker/1.0" },
+      headers: BROWSER_HEADERS,
     });
 
     if (!res.ok) {
@@ -263,10 +271,9 @@ export async function scrapeList(
   return entries;
 }
 
+
 /**
  * Scrapes the user's films filtered by star rating.
- * URL: /username/films/rated/{rating}/ where rating is 0.5-5 in 0.5 increments
- * Returns films with their slugs (for TMDB ID resolution).
  */
 export async function scrapeRatedFilms(
   username: string,
@@ -275,7 +282,7 @@ export async function scrapeRatedFilms(
   const entries: LetterboxdListEntry[] = [];
   let page = 1;
   let hasMore = true;
-  const ratingPath = rating % 1 === 0 ? `${rating}` : `${rating}`;
+  const ratingPath = `${rating}`;
 
   while (hasMore) {
     const url =
@@ -285,7 +292,7 @@ export async function scrapeRatedFilms(
 
     const res = await fetch(url, {
       next: { revalidate: 3600 },
-      headers: { "User-Agent": "OscarTracker/1.0" },
+      headers: BROWSER_HEADERS,
     });
 
     if (!res.ok) {
@@ -297,15 +304,10 @@ export async function scrapeRatedFilms(
     const $ = cheerio.load(html);
 
     const pageEntries = parsePosterItems($, entries.length);
-    if (pageEntries.length === 0) {
-      hasMore = false;
-      break;
-    }
+    if (pageEntries.length === 0) { hasMore = false; break; }
 
     entries.push(...pageEntries);
-
-    const nextPage = $("a.next");
-    hasMore = nextPage.length > 0;
+    hasMore = $("a.next").length > 0;
     page++;
   }
 
@@ -314,8 +316,6 @@ export async function scrapeRatedFilms(
 
 /**
  * Scrapes the user's COMPLETE watch history from their films page.
- * Paginates through all pages until no more posteritems are found.
- * Does NOT call resolveTmdbIds (too many films, would be too slow).
  */
 export async function scrapeAllWatchedFilms(
   username: string
@@ -332,12 +332,11 @@ export async function scrapeAllWatchedFilms(
 
     const res = await fetch(url, {
       next: { revalidate: 3600 },
-      headers: { "User-Agent": "OscarTracker/1.0" },
+      headers: BROWSER_HEADERS,
     });
 
     if (!res.ok) {
-      if (page === 1)
-        throw new Error(`Letterboxd films scrape failed: ${res.status}`);
+      if (page === 1) throw new Error(`Letterboxd films scrape failed: ${res.status}`);
       break;
     }
 
@@ -345,15 +344,10 @@ export async function scrapeAllWatchedFilms(
     const $ = cheerio.load(html);
 
     const pageEntries = parsePosterItems($, entries.length);
-    if (pageEntries.length === 0) {
-      hasMore = false;
-      break;
-    }
+    if (pageEntries.length === 0) { hasMore = false; break; }
 
     entries.push(...pageEntries);
-
-    const nextPage = $("a.next");
-    hasMore = nextPage.length > 0;
+    hasMore = $("a.next").length > 0;
     page++;
   }
 
@@ -379,7 +373,7 @@ export async function scrapeTaggedFilms(
 
     const res = await fetch(url, {
       next: { revalidate: 1800 },
-      headers: { "User-Agent": "OscarTracker/1.0" },
+      headers: BROWSER_HEADERS,
     });
 
     if (!res.ok) {

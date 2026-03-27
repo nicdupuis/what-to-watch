@@ -4,6 +4,14 @@ import { scrapeAllWatchedFilms, scrapeRatedFilms } from "@/lib/letterboxd";
 import { getRecommendations } from "@/lib/tmdb";
 import { TMDBMovie } from "@/types/movie";
 
+const BROWSER_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  Accept:
+    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9",
+};
+
 interface Recommendation {
   tmdbId: number;
   title: string;
@@ -24,19 +32,12 @@ function normalize(title: string): string {
     .replace(/[""]/g, '"');
 }
 
-/**
- * Resolves a TMDB ID for a Letterboxd entry by fetching the film's
- * Letterboxd page and extracting the data-tmdb-id attribute.
- */
 async function resolveSingleTmdbId(filmSlug: string): Promise<number | null> {
   try {
-    const res = await fetch(
-      `https://letterboxd.com/film/${filmSlug}/`,
-      {
-        next: { revalidate: 86400 },
-        headers: { "User-Agent": "OscarTracker/1.0" },
-      }
-    );
+    const res = await fetch(`https://letterboxd.com/film/${filmSlug}/`, {
+      next: { revalidate: 86400 },
+      headers: BROWSER_HEADERS,
+    });
     if (!res.ok) return null;
     const html = await res.text();
     const match = html.match(/data-tmdb-id="(\d+)"/);
@@ -46,12 +47,16 @@ async function resolveSingleTmdbId(filmSlug: string): Promise<number | null> {
   }
 }
 
-// Don't cache this route — each request should give fresh random seeds
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  // Disabled on Vercel — heavy scraping exceeds serverless timeout
+  if (process.env.VERCEL) {
+    return NextResponse.json([]);
+  }
+
   const ip = request.headers.get("x-forwarded-for") ?? "anonymous";
-  const { allowed } = rateLimit(`recs:${ip}`, 3, 3); // 3 requests, refill 3/min
+  const { allowed } = rateLimit(`recs:${ip}`, 3, 3);
   if (!allowed) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
@@ -68,28 +73,27 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 1. Fetch in parallel: full watch history (for exclusion) + all 5-star films (for seeds)
-    const [allWatched, fiveStarFilms] = await Promise.all([
+    const [allWatchedResult, fiveStarResult] = await Promise.allSettled([
       scrapeAllWatchedFilms(username),
       scrapeRatedFilms(username, 5),
     ]);
+    const allWatched =
+      allWatchedResult.status === "fulfilled" ? allWatchedResult.value : [];
+    const fiveStarFilms =
+      fiveStarResult.status === "fulfilled" ? fiveStarResult.value : [];
 
     if (allWatched.length === 0) {
       return NextResponse.json([]);
     }
 
-    // 2. Build a set of watched titles (normalized) to exclude from recommendations
     const watchedTitles = new Set(
       allWatched.map((entry) => normalize(entry.title))
     );
 
-    // 3. Pick a random sample of 5-star films as seeds
-    //    Shuffle and pick 10 so each refresh gives different results
     const maxSeeds = 10;
     const shuffled = [...fiveStarFilms].sort(() => Math.random() - 0.5);
     const seedEntries = shuffled.slice(0, maxSeeds);
 
-    // 4. Resolve TMDB IDs via Letterboxd film pages (slug-based, reliable)
     const resolvedSeeds = await Promise.all(
       seedEntries.map(async (entry) => {
         const tmdbId = await resolveSingleTmdbId(entry.filmSlug);
@@ -97,7 +101,6 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    // 5. For each seed film, get TMDB recommendations
     const recMap = new Map<
       number,
       { movie: TMDBMovie; basedOn: Set<string> }
@@ -110,28 +113,19 @@ export async function GET(request: NextRequest) {
           const recs = await getRecommendations(seed.tmdbId!);
           for (const rec of recs) {
             if (watchedTitles.has(normalize(rec.title))) continue;
-
             const existing = recMap.get(rec.id);
             if (existing) {
               existing.basedOn.add(seed.title);
             } else {
-              recMap.set(rec.id, {
-                movie: rec,
-                basedOn: new Set([seed.title]),
-              });
+              recMap.set(rec.id, { movie: rec, basedOn: new Set([seed.title]) });
             }
           }
         })
     );
 
-    // 6. Build recommendations with scoring
     const filtered: Recommendation[] = [];
     for (const [, { movie, basedOn }] of recMap) {
       if (movie.vote_average < 5 && movie.vote_count > 0) continue;
-
-      // Score = how many of the user's 5-star films recommended this
-      const score = basedOn.size;
-
       filtered.push({
         tmdbId: movie.id,
         title: movie.title,
@@ -140,14 +134,12 @@ export async function GET(request: NextRequest) {
         overview: movie.overview,
         voteAverage: movie.vote_average,
         genres: movie.genre_ids ?? [],
-        score: Math.round(score * 10) / 10,
+        score: Math.round(basedOn.size * 10) / 10,
         basedOn: [...basedOn],
       });
     }
 
-    // 7. Sort by score first, then by TMDB rating
     filtered.sort((a, b) => b.score - a.score || b.voteAverage - a.voteAverage);
-
     return NextResponse.json(filtered.slice(0, limit));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
